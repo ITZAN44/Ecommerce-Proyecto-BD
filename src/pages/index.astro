@@ -1,0 +1,191 @@
+---
+import Layout from '../layouts/Layout.astro';
+import { query } from '../lib/db';
+
+// Obtener estadísticas básicas
+let stats = {
+  totalProductos: 0,
+  totalClientes: 0,
+  totalPedidos: 0,
+  totalCategorias: 0
+};
+
+try {
+  const productosRes = await query('SELECT COUNT(*) as count FROM productos WHERE estado = $1', ['activo']);
+  const clientesRes = await query('SELECT COUNT(*) as count FROM clientes WHERE estado = $1', ['activo']);
+  const pedidosRes = await query('SELECT COUNT(*) as count FROM pedidos');
+  const categoriasRes = await query('SELECT COUNT(*) as count FROM categorias WHERE estado = $1', ['activo']);
+  
+  stats = {
+    totalProductos: parseInt(productosRes.rows[0].count),
+    totalClientes: parseInt(clientesRes.rows[0].count),
+    totalPedidos: parseInt(pedidosRes.rows[0].count),
+    totalCategorias: parseInt(categoriasRes.rows[0].count)
+  };
+} catch (error) {
+  console.error('Error al obtener estadísticas:', error);
+}
+---
+
+<Layout title="Dashboard">
+  <div class="px-4 sm:px-0">
+    <h1 class="text-3xl font-bold text-gray-900 mb-8">Dashboard E-commerce</h1>
+    
+    <!-- Estadísticas -->
+    <div class="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4 mb-8">
+      <div class="bg-white overflow-hidden shadow rounded-lg">
+        <div class="p-5">
+          <div class="flex items-center">
+            <div class="shrink-0">
+              <span class="text-4xl">📦</span>
+            </div>
+            <div class="ml-5 w-0 flex-1">
+              <dl>
+                <dt class="text-sm font-medium text-gray-500 truncate">
+                  Productos Activos
+                </dt>
+                <dd class="text-3xl font-semibold text-gray-900">
+                  {stats.totalProductos}
+                </dd>
+              </dl>
+            </div>
+          </div>
+        </div>
+        <div class="bg-gray-50 px-5 py-3">
+          <a href="/productos" class="text-sm font-medium text-blue-600 hover:text-blue-500">
+            Ver todos →
+          </a>
+        </div>
+      </div>
+
+      <div class="bg-white overflow-hidden shadow rounded-lg">
+        <div class="p-5">
+          <div class="flex items-center">
+            <div class="shrink-0">
+              <span class="text-4xl">👥</span>
+            </div>
+            <div class="ml-5 w-0 flex-1">
+              <dl>
+                <dt class="text-sm font-medium text-gray-500 truncate">
+                  Clientes Activos
+                </dt>
+                <dd class="text-3xl font-semibold text-gray-900">
+                  {stats.totalClientes}
+                </dd>
+              </dl>
+            </div>
+          </div>
+        </div>
+        <div class="bg-gray-50 px-5 py-3">
+          <a href="/clientes" class="text-sm font-medium text-blue-600 hover:text-blue-500">
+            Ver todos →
+          </a>
+        </div>
+      </div>
+
+      <div class="bg-white overflow-hidden shadow rounded-lg">
+        <div class="p-5">
+          <div class="flex items-center">
+            <div class="shrink-0">
+              <span class="text-4xl">🛍️</span>
+            </div>
+            <div class="ml-5 w-0 flex-1">
+              <dl>
+                <dt class="text-sm font-medium text-gray-500 truncate">
+                  Total Pedidos
+                </dt>
+                <dd class="text-3xl font-semibold text-gray-900">
+                  {stats.totalPedidos}
+                </dd>
+              </dl>
+            </div>
+          </div>
+        </div>
+        <div class="bg-gray-50 px-5 py-3">
+          <a href="/pedidos" class="text-sm font-medium text-blue-600 hover:text-blue-500">
+            Ver todos →
+          </a>
+        </div>
+      </div>
+
+      <div class="bg-white overflow-hidden shadow rounded-lg">
+        <div class="p-5">
+          <div class="flex items-center">
+            <div class="shrink-0">
+              <span class="text-4xl">📂</span>
+            </div>
+            <div class="ml-5 w-0 flex-1">
+              <dl>
+                <dt class="text-sm font-medium text-gray-500 truncate">
+                  Categorías
+                </dt>
+                <dd class="text-3xl font-semibold text-gray-900">
+                  {stats.totalCategorias}
+                </dd>
+              </dl>
+            </div>
+          </div>
+        </div>
+        <div class="bg-gray-50 px-5 py-3">
+          <a href="/categorias" class="text-sm font-medium text-blue-600 hover:text-blue-500">
+            Ver todas →
+          </a>
+        </div>
+      </div>
+    </div>
+
+    <!-- Accesos rápidos -->
+    <div class="bg-white shadow rounded-lg p-6">
+      <h2 class="text-xl font-semibold text-gray-900 mb-4">Accesos Rápidos</h2>
+      <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        <a href="/categorias" class="flex items-center p-4 border-2 border-gray-200 rounded-lg hover:border-blue-500 hover:bg-blue-50 transition">
+          <span class="text-3xl mr-3">📂</span>
+          <div>
+            <h3 class="font-medium text-gray-900">Gestionar Categorías</h3>
+            <p class="text-sm text-gray-500">Crear y editar categorías</p>
+          </div>
+        </a>
+        
+        <a href="/productos" class="flex items-center p-4 border-2 border-gray-200 rounded-lg hover:border-blue-500 hover:bg-blue-50 transition">
+          <span class="text-3xl mr-3">📦</span>
+          <div>
+            <h3 class="font-medium text-gray-900">Gestionar Productos</h3>
+            <p class="text-sm text-gray-500">Crear y editar productos</p>
+          </div>
+        </a>
+        
+        <a href="/stock" class="flex items-center p-4 border-2 border-gray-200 rounded-lg hover:border-blue-500 hover:bg-blue-50 transition">
+          <span class="text-3xl mr-3">📊</span>
+          <div>
+            <h3 class="font-medium text-gray-900">Gestionar Stock</h3>
+            <p class="text-sm text-gray-500">Control de inventario</p>
+          </div>
+        </a>
+        
+        <a href="/cupones" class="flex items-center p-4 border-2 border-gray-200 rounded-lg hover:border-blue-500 hover:bg-blue-50 transition">
+          <span class="text-3xl mr-3">🎟️</span>
+          <div>
+            <h3 class="font-medium text-gray-900">Cupones</h3>
+            <p class="text-sm text-gray-500">Crear y gestionar cupones</p>
+          </div>
+        </a>
+        
+        <a href="/clientes" class="flex items-center p-4 border-2 border-gray-200 rounded-lg hover:border-blue-500 hover:bg-blue-50 transition">
+          <span class="text-3xl mr-3">👥</span>
+          <div>
+            <h3 class="font-medium text-gray-900">Clientes</h3>
+            <p class="text-sm text-gray-500">Gestionar clientes</p>
+          </div>
+        </a>
+        
+        <a href="/pedidos" class="flex items-center p-4 border-2 border-gray-200 rounded-lg hover:border-blue-500 hover:bg-blue-50 transition">
+          <span class="text-3xl mr-3">🛍️</span>
+          <div>
+            <h3 class="font-medium text-gray-900">Pedidos</h3>
+            <p class="text-sm text-gray-500">Ver y gestionar pedidos</p>
+          </div>
+        </a>
+      </div>
+    </div>
+  </div>
+</Layout>

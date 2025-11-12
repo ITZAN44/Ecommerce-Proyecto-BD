@@ -1,0 +1,22 @@
+{
+  "name": "ecommers-proyecto",
+  "type": "module",
+  "version": "0.0.1",
+  "scripts": {
+    "dev": "astro dev",
+    "build": "astro build",
+    "preview": "astro preview",
+    "astro": "astro"
+  },
+  "dependencies": {
+    "@astrojs/node": "^9.5.0",
+    "@tailwindcss/vite": "^4.1.17",
+    "astro": "^5.15.4",
+    "dotenv": "^17.2.3",
+    "pg": "^8.16.3",
+    "tailwindcss": "^4.1.17"
+  },
+  "devDependencies": {
+    "@types/pg": "^8.15.6"
+  }
+}

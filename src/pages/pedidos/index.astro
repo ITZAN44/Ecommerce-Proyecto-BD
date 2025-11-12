@@ -1,0 +1,771 @@
+---
+import Layout from '../../layouts/Layout.astro';
+import { query } from '../../lib/db';
+
+let pedidos: any[] = [];
+let clientes: any[] = [];
+let stockDisponible: any[] = [];
+let cupones: any[] = [];
+let error = '';
+
+// Capturar error de la URL
+const url = new URL(Astro.request.url);
+const urlError = url.searchParams.get('error');
+if (urlError) {
+  error = decodeURIComponent(urlError);
+}
+
+try {
+  // Obtener pedidos con información completa
+  const resultPedidos = await query(`
+    SELECT 
+      p.pedido_id,
+      p.cliente_id,
+      p.direccion_envio_id,
+      p.cupon_id,
+      p.fecha_pedido,
+      p.estado_pedido,
+      p.subtotal,
+      p.descuento_aplicado,
+      p.impuestos,
+      p.total_pedido,
+      c.nombre,
+      c.apellido,
+      c.email,
+      d.direccion_linea_1,
+      d.ciudad,
+      d.pais,
+      cu.codigo_cupon
+    FROM pedidos p
+    INNER JOIN clientes c ON p.cliente_id = c.cliente_id
+    INNER JOIN direcciones d ON p.direccion_envio_id = d.direccion_id
+    LEFT JOIN cupones cu ON p.cupon_id = cu.cupon_id
+    ORDER BY p.pedido_id DESC
+  `);
+  pedidos = resultPedidos.rows;
+
+  // Obtener clientes con sus direcciones
+  const resultClientes = await query(`
+    SELECT 
+      c.cliente_id,
+      c.nombre,
+      c.apellido,
+      c.email,
+      COALESCE(
+        json_agg(
+          json_build_object(
+            'direccion_id', d.direccion_id,
+            'direccion_linea_1', d.direccion_linea_1,
+            'ciudad', d.ciudad,
+            'codigo_postal', d.codigo_postal,
+            'pais', d.pais
+          )
+        ) FILTER (WHERE d.direccion_id IS NOT NULL),
+        '[]'::json
+      ) AS direcciones
+    FROM clientes c
+    LEFT JOIN direcciones d ON c.cliente_id = d.cliente_id AND d.estado = 'activo'
+    WHERE c.estado = 'activo'
+    GROUP BY c.cliente_id, c.nombre, c.apellido, c.email
+    ORDER BY c.nombre, c.apellido
+  `);
+  clientes = resultClientes.rows;
+
+  // Obtener stock disponible con productos
+  const resultStock = await query(`
+    SELECT 
+      s.stock_id,
+      s.sku,
+      s.precio_unitario,
+      s.cantidad_en_stock,
+      s.cantidad_reservada,
+      (s.cantidad_en_stock - s.cantidad_reservada) AS disponible,
+      pr.nombre_producto,
+      c.nombre_categoria
+    FROM stock s
+    INNER JOIN productos pr ON s.producto_id = pr.producto_id
+    INNER JOIN categorias c ON pr.categoria_id = c.categoria_id
+    WHERE s.estado = 'activo' AND pr.estado = 'activo' AND c.estado = 'activo'
+      AND (s.cantidad_en_stock - s.cantidad_reservada) > 0
+    ORDER BY pr.nombre_producto, s.sku
+  `);
+  stockDisponible = resultStock.rows;
+
+  // Obtener cupones activos
+  const resultCupones = await query(`
+    SELECT 
+      cupon_id,
+      codigo_cupon,
+      tipo_descuento,
+      valor_descuento,
+      fecha_expiracion,
+      usos_disponibles
+    FROM cupones
+    WHERE estado = 'activo'
+      AND (fecha_expiracion IS NULL OR fecha_expiracion >= CURRENT_DATE)
+      AND (usos_disponibles IS NULL OR usos_disponibles > 0)
+    ORDER BY codigo_cupon
+  `);
+  cupones = resultCupones.rows;
+
+} catch (err) {
+  error = 'Error al cargar pedidos: ' + (err as Error).message;
+  console.error(err);
+}
+
+const pendientes = pedidos.filter(p => p.estado_pedido === 'pendiente').length;
+const pagados = pedidos.filter(p => p.estado_pedido === 'pagado').length;
+const enviados = pedidos.filter(p => p.estado_pedido === 'enviado').length;
+const completados = pedidos.filter(p => p.estado_pedido === 'completado').length;
+const cancelados = pedidos.filter(p => p.estado_pedido === 'cancelado').length;
+const totalVentas = pedidos
+  .filter(p => ['pagado', 'enviado', 'completado'].includes(p.estado_pedido))
+  .reduce((sum, p) => sum + parseFloat(p.total_pedido), 0);
+---
+
+<Layout title="Pedidos">
+  <div class="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-slate-50 py-8">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      
+      <!-- Header -->
+      <div class="mb-8">
+        <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+          <div>
+            <h1 class="text-4xl font-bold bg-gradient-to-r from-blue-600 to-cyan-600 bg-clip-text text-transparent flex items-center gap-3">
+              <span class="text-4xl">📋</span> Pedidos
+            </h1>
+            <p class="mt-2 text-slate-600">Gestiona los pedidos del e-commerce</p>
+          </div>
+          <button
+            onclick="document.getElementById('modal-crear').classList.remove('hidden')"
+            class="inline-flex items-center px-6 py-3 bg-gradient-to-r from-blue-600 to-cyan-600 hover:from-blue-700 hover:to-cyan-700 text-white font-semibold rounded-xl shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-200"
+          >
+            <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
+            </svg>
+            Crear Pedido
+          </button>
+        </div>
+      </div>
+
+      {error && (
+        <div class="mb-6 bg-red-50 border-l-4 border-red-500 p-4 rounded-lg">
+          <div class="flex items-center">
+            <svg class="w-5 h-5 text-red-500 mr-2" fill="currentColor" viewBox="0 0 20 20">
+              <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd"/>
+            </svg>
+            <p class="text-red-700 font-medium">{error}</p>
+          </div>
+        </div>
+      )}
+
+      <!-- Stats Cards -->
+      <div class="grid grid-cols-1 md:grid-cols-6 gap-4 mb-8">
+        <div class="bg-gradient-to-br from-yellow-500 to-yellow-600 rounded-2xl p-4 text-white shadow-xl transform hover:scale-105 transition-all duration-200">
+          <p class="text-yellow-100 text-xs font-medium">Pendientes</p>
+          <p class="text-3xl font-bold mt-1">{pendientes}</p>
+        </div>
+
+        <div class="bg-gradient-to-br from-green-600 to-green-700 rounded-2xl p-4 text-white shadow-xl transform hover:scale-105 transition-all duration-200">
+          <p class="text-green-100 text-xs font-medium">Pagados</p>
+          <p class="text-3xl font-bold mt-1">{pagados}</p>
+        </div>
+
+        <div class="bg-gradient-to-br from-blue-600 to-blue-700 rounded-2xl p-4 text-white shadow-xl transform hover:scale-105 transition-all duration-200">
+          <p class="text-blue-100 text-xs font-medium">Enviados</p>
+          <p class="text-3xl font-bold mt-1">{enviados}</p>
+        </div>
+
+        <div class="bg-gradient-to-br from-purple-600 to-purple-700 rounded-2xl p-4 text-white shadow-xl transform hover:scale-105 transition-all duration-200">
+          <p class="text-purple-100 text-xs font-medium">Completados</p>
+          <p class="text-3xl font-bold mt-1">{completados}</p>
+        </div>
+
+        <div class="bg-gradient-to-br from-red-600 to-red-700 rounded-2xl p-4 text-white shadow-xl transform hover:scale-105 transition-all duration-200">
+          <p class="text-red-100 text-xs font-medium">Cancelados</p>
+          <p class="text-3xl font-bold mt-1">{cancelados}</p>
+        </div>
+
+        <div class="bg-gradient-to-br from-cyan-600 to-cyan-700 rounded-2xl p-4 text-white shadow-xl transform hover:scale-105 transition-all duration-200">
+          <p class="text-cyan-100 text-xs font-medium">Total Ventas</p>
+          <p class="text-2xl font-bold mt-1">${totalVentas.toFixed(2)}</p>
+        </div>
+      </div>
+
+      <!-- Tabla de Pedidos -->
+      <div class="bg-white rounded-2xl shadow-xl overflow-hidden border border-slate-200">
+        <div class="overflow-x-auto">
+          <table class="min-w-full divide-y divide-slate-200">
+            <thead class="bg-gradient-to-r from-slate-50 to-slate-100">
+              <tr>
+                <th class="px-6 py-4 text-left text-xs font-bold text-slate-700 uppercase tracking-wider">Pedido #</th>
+                <th class="px-6 py-4 text-left text-xs font-bold text-slate-700 uppercase tracking-wider">Cliente</th>
+                <th class="px-6 py-4 text-left text-xs font-bold text-slate-700 uppercase tracking-wider">Dirección</th>
+                <th class="px-6 py-4 text-right text-xs font-bold text-slate-700 uppercase tracking-wider">Total</th>
+                <th class="px-6 py-4 text-center text-xs font-bold text-slate-700 uppercase tracking-wider">Estado</th>
+                <th class="px-6 py-4 text-center text-xs font-bold text-slate-700 uppercase tracking-wider">Fecha</th>
+                <th class="px-6 py-4 text-center text-xs font-bold text-slate-700 uppercase tracking-wider">Cupón</th>
+                <th class="px-6 py-4 text-right text-xs font-bold text-slate-700 uppercase tracking-wider">Acciones</th>
+              </tr>
+            </thead>
+            <tbody class="bg-white divide-y divide-slate-200">
+              {pedidos.map((pedido) => (
+                <tr class="hover:bg-slate-50 transition-colors duration-150">
+                  <td class="px-6 py-4">
+                    <div class="flex items-center gap-2">
+                      <div class="shrink-0 h-10 w-10 bg-gradient-to-br from-blue-500 to-cyan-600 rounded-full flex items-center justify-center shadow-md">
+                        <span class="text-white font-bold text-sm">#{pedido.pedido_id}</span>
+                      </div>
+                    </div>
+                  </td>
+                  <td class="px-6 py-4">
+                    <div>
+                      <div class="text-sm font-bold text-slate-900">{pedido.nombre} {pedido.apellido}</div>
+                      <div class="text-xs text-slate-500">{pedido.email}</div>
+                    </div>
+                  </td>
+                  <td class="px-6 py-4">
+                    <div class="text-sm text-slate-700">{pedido.ciudad}, {pedido.pais}</div>
+                    <div class="text-xs text-slate-500">{pedido.direccion_linea_1}</div>
+                  </td>
+                  <td class="px-6 py-4 text-right">
+                    <div>
+                      <span class="text-lg font-bold text-blue-600">${parseFloat(pedido.total_pedido).toFixed(2)}</span>
+                      {parseFloat(pedido.descuento_aplicado) > 0 && (
+                        <div class="text-xs text-green-600">-${parseFloat(pedido.descuento_aplicado).toFixed(2)}</div>
+                      )}
+                    </div>
+                  </td>
+                  <td class="px-6 py-4 text-center">
+                    <span class={`inline-flex px-3 py-1 text-xs font-bold rounded-full ${
+                      pedido.estado_pedido === 'completado' ? 'bg-purple-100 text-purple-800' :
+                      pedido.estado_pedido === 'enviado' ? 'bg-blue-100 text-blue-800' :
+                      pedido.estado_pedido === 'pagado' ? 'bg-green-100 text-green-800' :
+                      pedido.estado_pedido === 'cancelado' ? 'bg-red-100 text-red-800' :
+                      'bg-yellow-100 text-yellow-800'
+                    }`}>
+                      {pedido.estado_pedido}
+                    </span>
+                  </td>
+                  <td class="px-6 py-4 text-center text-sm text-slate-600">
+                    {new Date(pedido.fecha_pedido).toLocaleDateString('es-ES', {
+                      day: '2-digit',
+                      month: 'short',
+                      year: 'numeric'
+                    })}
+                  </td>
+                  <td class="px-6 py-4 text-center">
+                    {pedido.codigo_cupon ? (
+                      <span class="text-xs font-mono bg-amber-100 text-amber-800 px-2 py-1 rounded">{pedido.codigo_cupon}</span>
+                    ) : (
+                      <span class="text-slate-400">-</span>
+                    )}
+                  </td>
+                  <td class="px-6 py-4 text-right">
+                    <div class="flex gap-2 justify-end">
+                      {pedido.estado_pedido === 'pendiente' && !pedido.cupon_id && (
+                        <button
+                          data-pedido-id={pedido.pedido_id}
+                          data-action="aplicar-cupon"
+                          class="btn-action text-amber-600 hover:text-amber-800 font-semibold hover:bg-amber-50 p-2 rounded-lg transition-colors"
+                          title="Aplicar Cupón"
+                        >
+                          🎟️
+                        </button>
+                      )}
+                      {['pendiente', 'pagado'].includes(pedido.estado_pedido) && (
+                        <button
+                          data-pedido-id={pedido.pedido_id}
+                          data-action="cancelar"
+                          class="btn-action text-red-600 hover:text-red-800 font-semibold hover:bg-red-50 p-2 rounded-lg transition-colors"
+                          title="Cancelar Pedido"
+                        >
+                          ❌
+                        </button>
+                      )}
+                      {pedido.estado_pedido === 'cancelado' && (
+                        <button
+                          data-pedido-id={pedido.pedido_id}
+                          data-action="eliminar"
+                          class="btn-action text-rose-600 hover:text-rose-800 font-semibold hover:bg-rose-50 p-2 rounded-lg transition-colors"
+                          title="Eliminar Permanentemente"
+                        >
+                          🗑️
+                        </button>
+                      )}
+                    </div>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal Crear Pedido -->
+  <div id="modal-crear" class="hidden fixed inset-0 bg-black/60 backdrop-blur-sm overflow-y-auto h-full w-full z-50 flex items-center justify-center p-4">
+    <div class="relative bg-white rounded-2xl shadow-2xl max-w-4xl w-full animate-slideIn">
+      <div class="bg-gradient-to-r from-blue-600 to-cyan-600 rounded-t-2xl px-6 py-5">
+        <h3 class="text-2xl font-bold text-white flex items-center gap-2">
+          <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
+          </svg>
+          Crear Nuevo Pedido
+        </h3>
+      </div>
+      
+      <form action="/api/pedidos" method="POST" class="p-6" id="form-crear-pedido">
+        <div class="space-y-5">
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label class="block text-sm font-semibold text-slate-700 mb-2">
+                Cliente <span class="text-red-500">*</span>
+              </label>
+              <select
+                name="cliente_id"
+                id="select-cliente"
+                required
+                class="w-full px-4 py-3 border-2 border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 outline-none"
+              >
+                <option value="">Seleccionar cliente...</option>
+                {clientes.map((cliente) => (
+                  <option value={cliente.cliente_id} data-direcciones={JSON.stringify(cliente.direcciones)}>
+                    {cliente.nombre} {cliente.apellido} ({cliente.email})
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div>
+              <label class="block text-sm font-semibold text-slate-700 mb-2">
+                Dirección de Envío <span class="text-red-500">*</span>
+              </label>
+              <select
+                name="direccion_envio_id"
+                id="select-direccion"
+                required
+                disabled
+                class="w-full px-4 py-3 border-2 border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 outline-none disabled:bg-slate-100"
+              >
+                <option value="">Primero seleccione un cliente</option>
+              </select>
+            </div>
+          </div>
+
+          <div>
+            <label class="block text-sm font-semibold text-slate-700 mb-2">
+              Cupón (Opcional)
+            </label>
+            <select
+              name="cupon_id"
+              class="w-full px-4 py-3 border-2 border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 outline-none"
+            >
+              <option value="">Sin cupón</option>
+              {cupones.map((cupon) => (
+                <option value={cupon.cupon_id}>
+                  {cupon.codigo_cupon} - {cupon.tipo_descuento === 'porcentaje' ? `${cupon.valor_descuento}%` : `$${cupon.valor_descuento}`} OFF
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <div>
+            <label class="block text-sm font-semibold text-slate-700 mb-2">
+              Productos <span class="text-red-500">*</span>
+            </label>
+            <div id="items-container" class="space-y-3">
+              <!-- Items se agregarán dinámicamente aquí -->
+            </div>
+            <button
+              type="button"
+              onclick="agregarItem()"
+              class="mt-3 text-blue-600 hover:text-blue-800 font-semibold text-sm flex items-center gap-2"
+            >
+              <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
+              </svg>
+              Agregar Producto
+            </button>
+          </div>
+
+          <input type="hidden" name="items" id="items-json" />
+
+          <div class="bg-blue-50 border-l-4 border-blue-500 p-3 rounded">
+            <p class="text-sm text-blue-800">
+              <svg class="w-4 h-4 inline mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+              </svg>
+              El pedido se creará en estado "pendiente". Los totales (subtotal, impuestos, total) se calcularán automáticamente.
+            </p>
+          </div>
+        </div>
+        
+        <div class="flex gap-3 mt-6">
+          <button
+            type="submit"
+            class="flex-1 bg-gradient-to-r from-blue-600 to-cyan-600 hover:from-blue-700 hover:to-cyan-700 text-white font-semibold py-3 px-4 rounded-xl shadow-lg hover:shadow-xl transition-all duration-200 transform hover:scale-105"
+          >
+            Crear Pedido
+          </button>
+          <button
+            type="button"
+            onclick="cerrarModalCrear()"
+            class="px-6 bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold py-3 rounded-xl transition-all duration-200"
+          >
+            Cancelar
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Modal Aplicar Cupón -->
+  <div id="modal-cupon" class="hidden fixed inset-0 bg-black/60 backdrop-blur-sm overflow-y-auto h-full w-full z-50 flex items-center justify-center p-4">
+    <div class="relative bg-white rounded-2xl shadow-2xl max-w-md w-full animate-slideIn">
+      <div class="bg-gradient-to-r from-amber-500 to-amber-600 rounded-t-2xl px-6 py-5">
+        <h3 class="text-2xl font-bold text-white flex items-center gap-2">
+          🎟️ Aplicar Cupón
+        </h3>
+      </div>
+      
+      <form action="/api/pedidos" method="POST" class="p-6">
+        <input type="hidden" name="_method" value="PATCH" />
+        <input type="hidden" name="pedido_id" id="cupon-pedido-id" />
+        
+        <div class="space-y-4">
+          <div>
+            <label class="block text-sm font-semibold text-slate-700 mb-2">
+              Código del Cupón <span class="text-red-500">*</span>
+            </label>
+            <input
+              type="text"
+              name="codigo_cupon"
+              required
+              placeholder="Ej: VERANO20"
+              class="w-full px-4 py-3 border-2 border-slate-300 rounded-xl focus:ring-2 focus:ring-amber-500 focus:border-transparent transition-all duration-200 outline-none uppercase"
+            />
+          </div>
+        </div>
+        
+        <div class="flex gap-3 mt-6">
+          <button
+            type="submit"
+            class="flex-1 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-white font-semibold py-3 px-4 rounded-xl shadow-lg hover:shadow-xl transition-all duration-200 transform hover:scale-105"
+          >
+            Aplicar Cupón
+          </button>
+          <button
+            type="button"
+            onclick="document.getElementById('modal-cupon').classList.add('hidden')"
+            class="px-6 bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold py-3 rounded-xl transition-all duration-200"
+          >
+            Cancelar
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Modal Cancelar Pedido -->
+  <div id="modal-cancelar" class="hidden fixed inset-0 bg-black/60 backdrop-blur-sm overflow-y-auto h-full w-full z-50 flex items-center justify-center p-4">
+    <div class="relative bg-white rounded-2xl shadow-2xl max-w-md w-full animate-slideIn">
+      <div class="bg-gradient-to-r from-red-600 to-red-700 rounded-t-2xl px-6 py-5">
+        <h3 class="text-2xl font-bold text-white flex items-center gap-2">
+          ❌ Cancelar Pedido
+        </h3>
+      </div>
+      
+      <form action="/api/pedidos" method="POST" class="p-6">
+        <input type="hidden" name="_method" value="DELETE" />
+        <input type="hidden" name="pedido_id" id="cancelar-pedido-id" />
+        
+        <div class="space-y-4">
+          <div>
+            <label class="block text-sm font-semibold text-slate-700 mb-2">
+              Motivo de la Cancelación <span class="text-red-500">*</span>
+            </label>
+            <textarea
+              name="motivo"
+              required
+              rows="4"
+              placeholder="Explique por qué se cancela este pedido..."
+              class="w-full px-4 py-3 border-2 border-slate-300 rounded-xl focus:ring-2 focus:ring-red-500 focus:border-transparent transition-all duration-200 outline-none resize-none"
+            ></textarea>
+          </div>
+
+          <div class="bg-red-50 border-l-4 border-red-500 p-3 rounded">
+            <p class="text-sm text-red-800">
+              <svg class="w-4 h-4 inline mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/>
+              </svg>
+              Esta acción liberará el stock reservado y no se puede deshacer
+            </p>
+          </div>
+        </div>
+        
+        <div class="flex gap-3 mt-6">
+          <button
+            type="submit"
+            class="flex-1 bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800 text-white font-semibold py-3 px-4 rounded-xl shadow-lg hover:shadow-xl transition-all duration-200 transform hover:scale-105"
+          >
+            Confirmar Cancelación
+          </button>
+          <button
+            type="button"
+            onclick="document.getElementById('modal-cancelar').classList.add('hidden')"
+            class="px-6 bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold py-3 rounded-xl transition-all duration-200"
+          >
+            Volver
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <script is:inline define:vars={{ stockDisponible }}>
+    let itemCount = 0;
+
+    function cargarDirecciones() {
+      const selectCliente = document.getElementById('select-cliente');
+      const selectDireccion = document.getElementById('select-direccion');
+      const selectedOption = selectCliente.options[selectCliente.selectedIndex];
+      
+      if (selectedOption.value) {
+        const direcciones = JSON.parse(selectedOption.getAttribute('data-direcciones'));
+        
+        selectDireccion.innerHTML = '';
+        
+        if (direcciones && direcciones.length > 0 && direcciones[0].direccion_id) {
+          selectDireccion.innerHTML = '<option value="">Seleccionar dirección...</option>';
+          direcciones.forEach(dir => {
+            const option = document.createElement('option');
+            option.value = dir.direccion_id;
+            option.textContent = `${dir.direccion_linea_1}, ${dir.ciudad}, ${dir.pais}`;
+            selectDireccion.appendChild(option);
+          });
+          selectDireccion.disabled = false;
+        } else {
+          selectDireccion.innerHTML = '<option value="">⚠️ Este cliente no tiene direcciones activas</option>';
+          selectDireccion.disabled = true;
+          alert('⚠️ El cliente seleccionado no tiene direcciones registradas.\n\nPor favor, ve al módulo de Clientes y agrega una dirección primero.');
+        }
+      } else {
+        selectDireccion.innerHTML = '<option value="">Primero seleccione un cliente</option>';
+        selectDireccion.disabled = true;
+      }
+    }
+
+    // Agregar event listener para el select de cliente
+    document.addEventListener('DOMContentLoaded', () => {
+      const selectCliente = document.getElementById('select-cliente');
+      if (selectCliente) {
+        selectCliente.addEventListener('change', cargarDirecciones);
+      }
+
+      // Agregar event listeners para botones de acciones
+      document.querySelectorAll('.btn-action').forEach(btn => {
+        btn.addEventListener('click', function() {
+          const pedidoId = this.getAttribute('data-pedido-id');
+          const action = this.getAttribute('data-action');
+          
+          if (action === 'aplicar-cupon') {
+            aplicarCupon(pedidoId);
+          } else if (action === 'cancelar') {
+            cancelarPedido(pedidoId);
+          } else if (action === 'eliminar') {
+            eliminarPedido(pedidoId);
+          }
+        });
+      });
+    });
+
+    function agregarItem() {
+      const container = document.getElementById('items-container');
+      const itemId = itemCount++;
+      
+      const itemDiv = document.createElement('div');
+      itemDiv.className = 'flex gap-2 items-start';
+      itemDiv.id = `item-${itemId}`;
+      itemDiv.innerHTML = `
+        <select id="stock-${itemId}" required class="flex-1 px-3 py-2 border-2 border-slate-300 rounded-lg text-sm">
+          <option value="">Seleccionar producto...</option>
+          ${stockDisponible.map(s => 
+            `<option value="${s.stock_id}" data-precio="${s.precio_unitario}" data-disponible="${s.disponible}">
+              ${s.nombre_producto} (SKU: ${s.sku}) - $${parseFloat(s.precio_unitario).toFixed(2)} - Disponible: ${s.disponible}
+            </option>`
+          ).join('')}
+        </select>
+        <input type="number" id="cantidad-${itemId}" min="1" required placeholder="Cant." 
+          class="w-24 px-3 py-2 border-2 border-slate-300 rounded-lg text-sm" />
+        <button type="button" onclick="eliminarItem(${itemId})" 
+          class="text-red-600 hover:text-red-800 hover:bg-red-50 p-2 rounded-lg transition-colors">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+          </svg>
+        </button>
+      `;
+      
+      container.appendChild(itemDiv);
+    }
+
+    function eliminarItem(itemId) {
+      document.getElementById(`item-${itemId}`).remove();
+    }
+
+    function cerrarModalCrear() {
+      document.getElementById('modal-crear').classList.add('hidden');
+      document.getElementById('items-container').innerHTML = '';
+      itemCount = 0;
+    }
+
+    function aplicarCupon(pedidoId) {
+      document.getElementById('cupon-pedido-id').value = pedidoId;
+      document.getElementById('modal-cupon').classList.remove('hidden');
+    }
+
+    function cancelarPedido(pedidoId) {
+      document.getElementById('cancelar-pedido-id').value = pedidoId;
+      document.getElementById('modal-cancelar').classList.remove('hidden');
+    }
+
+    async function eliminarPedido(pedidoId) {
+      if (!confirm(`⚠️ ELIMINAR PEDIDO PERMANENTEMENTE\n\n¿Estás seguro de eliminar el pedido #${pedidoId}?\n\nEsta acción NO se puede deshacer. Se eliminarán también los detalles, pagos y envíos asociados.\n\nSOLO se pueden eliminar pedidos cancelados.`)) {
+        return;
+      }
+
+      if (!confirm(`Confirma nuevamente: ¿Eliminar pedido #${pedidoId} de la base de datos?`)) {
+        return;
+      }
+
+      try {
+        const formData = new FormData();
+        formData.append('_method', 'DELETE');
+        formData.append('pedido_id', pedidoId);
+        formData.append('motivo', 'Eliminación permanente');
+        formData.append('eliminar_fisico', 'true');
+
+        const response = await fetch('/api/pedidos', {
+          method: 'POST',
+          body: formData
+        });
+
+        const url = new URL(response.url);
+        const error = url.searchParams.get('error');
+        
+        if (error) {
+          alert('❌ Error: ' + decodeURIComponent(error));
+          location.href = '/pedidos';
+        } else if (response.redirected || response.ok) {
+          alert('✅ Pedido eliminado exitosamente');
+          location.href = '/pedidos';
+        } else {
+          alert('Error al eliminar el pedido');
+        }
+      } catch (error) {
+        console.error('Error al eliminar pedido:', error);
+        alert('Error al eliminar el pedido');
+      }
+    }
+
+    // Procesar formulario antes de enviar
+    document.getElementById('form-crear-pedido').addEventListener('submit', (e) => {
+      // Validar cliente
+      const clienteId = document.getElementById('select-cliente').value;
+      if (!clienteId) {
+        e.preventDefault();
+        alert('Debe seleccionar un cliente');
+        return false;
+      }
+
+      // Validar dirección
+      const direccionId = document.getElementById('select-direccion').value;
+      if (!direccionId) {
+        e.preventDefault();
+        alert('Debe seleccionar una dirección de envío');
+        return false;
+      }
+
+      // Validar items
+      const items = [];
+      const container = document.getElementById('items-container');
+      const itemDivs = container.querySelectorAll('[id^="item-"]');
+      
+      itemDivs.forEach(div => {
+        const id = div.id.split('-')[1];
+        const stockSelect = document.getElementById(`stock-${id}`);
+        const cantidadInput = document.getElementById(`cantidad-${id}`);
+        
+        if (stockSelect.value && cantidadInput.value) {
+          const disponible = parseInt(stockSelect.options[stockSelect.selectedIndex].getAttribute('data-disponible'));
+          const cantidad = parseInt(cantidadInput.value);
+          
+          if (cantidad > disponible) {
+            e.preventDefault();
+            alert(`La cantidad solicitada (${cantidad}) supera el stock disponible (${disponible})`);
+            return false;
+          }
+          
+          items.push({
+            stock_id: parseInt(stockSelect.value),
+            cantidad: cantidad
+          });
+        }
+      });
+      
+      if (items.length === 0) {
+        e.preventDefault();
+        alert('Debe agregar al menos un producto al pedido');
+        return false;
+      }
+      
+      document.getElementById('items-json').value = JSON.stringify(items);
+    });
+
+    // Agregar primer item automáticamente
+    window.addEventListener('load', () => {
+      if (document.getElementById('modal-crear').classList.contains('hidden')) {
+        // Solo al abrir el modal
+      }
+    });
+
+    // Escuchar apertura del modal
+    const observer = new MutationObserver((mutations) => {
+      mutations.forEach((mutation) => {
+        if (mutation.attributeName === 'class') {
+          const modal = document.getElementById('modal-crear');
+          if (!modal.classList.contains('hidden') && itemCount === 0) {
+            agregarItem();
+          }
+        }
+      });
+    });
+
+    observer.observe(document.getElementById('modal-crear'), {
+      attributes: true,
+      attributeFilter: ['class']
+    });
+
+    // Cerrar modales con ESC
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape') {
+        document.getElementById('modal-crear').classList.add('hidden');
+        document.getElementById('modal-cupon').classList.add('hidden');
+        document.getElementById('modal-cancelar').classList.add('hidden');
+      }
+    });
+
+    // Cerrar modales al hacer clic fuera
+    ['modal-crear', 'modal-cupon', 'modal-cancelar'].forEach(modalId => {
+      const modal = document.getElementById(modalId);
+      if (modal) {
+        modal.addEventListener('click', (e) => {
+          if (e.target.id === modalId) {
+            e.target.classList.add('hidden');
+          }
+        });
+      }
+    });
+  </script>
+</Layout>

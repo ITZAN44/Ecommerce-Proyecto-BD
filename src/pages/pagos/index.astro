@@ -1,0 +1,449 @@
+---
+import Layout from '../../layouts/Layout.astro';
+import { query } from '../../lib/db';
+
+let pagos: any[] = [];
+let pedidosPendientes: any[] = [];
+let error = '';
+
+// Capturar error de la URL
+const url = new URL(Astro.request.url);
+const urlError = url.searchParams.get('error');
+if (urlError) {
+  error = decodeURIComponent(urlError);
+}
+
+try {
+  // Obtener pagos con información del pedido y cliente
+  const resultPagos = await query(`
+    SELECT 
+      pa.pago_id,
+      pa.pedido_id,
+      pa.fecha_pago,
+      pa.monto,
+      pa.metodo_pago,
+      pa.estado_pago,
+      pa.id_transaccion_externa,
+      p.total_pedido,
+      p.estado_pedido,
+      c.nombre,
+      c.apellido,
+      c.email
+    FROM pagos pa
+    INNER JOIN pedidos p ON pa.pedido_id = p.pedido_id
+    INNER JOIN clientes c ON p.cliente_id = c.cliente_id
+    ORDER BY pa.pago_id DESC
+  `);
+  pagos = resultPagos.rows;
+
+  // Obtener pedidos pendientes de pago
+  const resultPedidos = await query(`
+    SELECT 
+      p.pedido_id,
+      p.total_pedido,
+      p.fecha_pedido,
+      c.nombre,
+      c.apellido,
+      c.email
+    FROM pedidos p
+    INNER JOIN clientes c ON p.cliente_id = c.cliente_id
+    WHERE p.estado_pedido = 'pendiente'
+    ORDER BY p.pedido_id DESC
+  `);
+  pedidosPendientes = resultPedidos.rows;
+
+} catch (err) {
+  error = 'Error al cargar pagos: ' + (err as Error).message;
+  console.error(err);
+}
+
+const exitosos = pagos.filter(p => p.estado_pago === 'exitoso').length;
+const fallidos = pagos.filter(p => p.estado_pago === 'fallido').length;
+const pendientes = pagos.filter(p => p.estado_pago === 'pendiente').length;
+const reembolsados = pagos.filter(p => p.estado_pago === 'reembolsado').length;
+const totalMonto = pagos.filter(p => p.estado_pago === 'exitoso').reduce((sum, p) => sum + parseFloat(p.monto), 0);
+---
+
+<Layout title="Pagos">
+  <div class="min-h-screen bg-gradient-to-br from-slate-50 via-green-50 to-slate-50 py-8">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      
+      <!-- Header -->
+      <div class="mb-8">
+        <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+          <div>
+            <h1 class="text-4xl font-bold bg-gradient-to-r from-green-600 to-emerald-600 bg-clip-text text-transparent flex items-center gap-3">
+              <span class="text-4xl">💳</span> Pagos
+            </h1>
+            <p class="mt-2 text-slate-600">Gestiona los pagos de los pedidos</p>
+          </div>
+          <button
+            onclick="document.getElementById('modal-procesar').classList.remove('hidden')"
+            class="inline-flex items-center px-6 py-3 bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white font-semibold rounded-xl shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-200"
+          >
+            <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
+            </svg>
+            Procesar Pago
+          </button>
+        </div>
+      </div>
+
+      {error && (
+        <div class="mb-6 bg-red-50 border-l-4 border-red-500 p-4 rounded-lg">
+          <div class="flex items-center">
+            <svg class="w-5 h-5 text-red-500 mr-2" fill="currentColor" viewBox="0 0 20 20">
+              <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd"/>
+            </svg>
+            <p class="text-red-700 font-medium">{error}</p>
+          </div>
+        </div>
+      )}
+
+      <!-- Stats Cards -->
+      <div class="grid grid-cols-1 md:grid-cols-5 gap-6 mb-8">
+        <div class="bg-gradient-to-br from-green-600 to-emerald-600 rounded-2xl p-6 text-white shadow-xl transform hover:scale-105 transition-all duration-200">
+          <div class="flex items-center justify-between">
+            <div>
+              <p class="text-green-100 text-sm font-medium">Exitosos</p>
+              <p class="text-4xl font-bold mt-2">{exitosos}</p>
+            </div>
+            <div class="bg-white/20 p-4 rounded-xl backdrop-blur-sm">
+              <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+              </svg>
+            </div>
+          </div>
+        </div>
+
+        <div class="bg-gradient-to-br from-yellow-500 to-yellow-600 rounded-2xl p-6 text-white shadow-xl transform hover:scale-105 transition-all duration-200">
+          <div class="flex items-center justify-between">
+            <div>
+              <p class="text-yellow-100 text-sm font-medium">Pendientes</p>
+              <p class="text-4xl font-bold mt-2">{pendientes}</p>
+            </div>
+            <div class="bg-white/20 p-4 rounded-xl backdrop-blur-sm">
+              <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
+              </svg>
+            </div>
+          </div>
+        </div>
+
+        <div class="bg-gradient-to-br from-red-600 to-red-700 rounded-2xl p-6 text-white shadow-xl transform hover:scale-105 transition-all duration-200">
+          <div class="flex items-center justify-between">
+            <div>
+              <p class="text-red-100 text-sm font-medium">Fallidos</p>
+              <p class="text-4xl font-bold mt-2">{fallidos}</p>
+            </div>
+            <div class="bg-white/20 p-4 rounded-xl backdrop-blur-sm">
+              <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+              </svg>
+            </div>
+          </div>
+        </div>
+
+        <div class="bg-gradient-to-br from-purple-600 to-purple-700 rounded-2xl p-6 text-white shadow-xl transform hover:scale-105 transition-all duration-200">
+          <div class="flex items-center justify-between">
+            <div>
+              <p class="text-purple-100 text-sm font-medium">Reembolsados</p>
+              <p class="text-4xl font-bold mt-2">{reembolsados}</p>
+            </div>
+            <div class="bg-white/20 p-4 rounded-xl backdrop-blur-sm">
+              <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6"/>
+              </svg>
+            </div>
+          </div>
+        </div>
+
+        <div class="bg-gradient-to-br from-blue-600 to-blue-700 rounded-2xl p-6 text-white shadow-xl transform hover:scale-105 transition-all duration-200">
+          <div class="flex items-center justify-between">
+            <div>
+              <p class="text-blue-100 text-sm font-medium">Total Recaudado</p>
+              <p class="text-3xl font-bold mt-2">${totalMonto.toFixed(2)}</p>
+            </div>
+            <div class="bg-white/20 p-4 rounded-xl backdrop-blur-sm">
+              <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+              </svg>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Tabla de Pagos -->
+      <div class="bg-white rounded-2xl shadow-xl overflow-hidden border border-slate-200">
+        <div class="overflow-x-auto">
+          <table class="min-w-full divide-y divide-slate-200">
+            <thead class="bg-gradient-to-r from-slate-50 to-slate-100">
+              <tr>
+                <th class="px-6 py-4 text-left text-xs font-bold text-slate-700 uppercase tracking-wider">Pago #</th>
+                <th class="px-6 py-4 text-left text-xs font-bold text-slate-700 uppercase tracking-wider">Pedido #</th>
+                <th class="px-6 py-4 text-left text-xs font-bold text-slate-700 uppercase tracking-wider">Cliente</th>
+                <th class="px-6 py-4 text-right text-xs font-bold text-slate-700 uppercase tracking-wider">Monto</th>
+                <th class="px-6 py-4 text-left text-xs font-bold text-slate-700 uppercase tracking-wider">Método</th>
+                <th class="px-6 py-4 text-center text-xs font-bold text-slate-700 uppercase tracking-wider">Estado</th>
+                <th class="px-6 py-4 text-center text-xs font-bold text-slate-700 uppercase tracking-wider">Fecha</th>
+                <th class="px-6 py-4 text-left text-xs font-bold text-slate-700 uppercase tracking-wider">ID Transacción</th>
+                <th class="px-6 py-4 text-center text-xs font-bold text-slate-700 uppercase tracking-wider">Acciones</th>
+              </tr>
+            </thead>
+            <tbody class="bg-white divide-y divide-slate-200">
+              {pagos.map((pago) => (
+                <tr class="hover:bg-slate-50 transition-colors duration-150">
+                  <td class="px-6 py-4">
+                    <div class="flex items-center gap-2">
+                      <div class="shrink-0 h-10 w-10 bg-gradient-to-br from-green-500 to-emerald-600 rounded-full flex items-center justify-center shadow-md">
+                        <span class="text-white font-bold text-sm">#{pago.pago_id}</span>
+                      </div>
+                    </div>
+                  </td>
+                  <td class="px-6 py-4">
+                    <span class="text-sm font-semibold text-slate-900">Pedido #{pago.pedido_id}</span>
+                  </td>
+                  <td class="px-6 py-4">
+                    <div>
+                      <div class="text-sm font-bold text-slate-900">{pago.nombre} {pago.apellido}</div>
+                      <div class="text-xs text-slate-500">{pago.email}</div>
+                    </div>
+                  </td>
+                  <td class="px-6 py-4 text-right">
+                    <span class="text-lg font-bold text-green-600">${parseFloat(pago.monto).toFixed(2)}</span>
+                  </td>
+                  <td class="px-6 py-4 text-sm text-slate-700 capitalize">
+                    {pago.metodo_pago || '-'}
+                  </td>
+                  <td class="px-6 py-4 text-center">
+                    <span class={`inline-flex px-3 py-1 text-xs font-bold rounded-full ${
+                      pago.estado_pago === 'exitoso' ? 'bg-green-100 text-green-800' :
+                      pago.estado_pago === 'pendiente' ? 'bg-yellow-100 text-yellow-800' :
+                      pago.estado_pago === 'reembolsado' ? 'bg-purple-100 text-purple-800' :
+                      'bg-red-100 text-red-800'
+                    }`}>
+                      {pago.estado_pago}
+                    </span>
+                  </td>
+                  <td class="px-6 py-4 text-center text-sm text-slate-600">
+                    {new Date(pago.fecha_pago).toLocaleDateString('es-ES', {
+                      day: '2-digit',
+                      month: 'short',
+                      year: 'numeric',
+                      hour: '2-digit',
+                      minute: '2-digit'
+                    })}
+                  </td>
+                  <td class="px-6 py-4">
+                    {pago.id_transaccion_externa ? (
+                      <span class="text-xs font-mono bg-slate-100 px-2 py-1 rounded">{pago.id_transaccion_externa}</span>
+                    ) : (
+                      <span class="text-slate-400">-</span>
+                    )}
+                  </td>
+                  <td class="px-6 py-4 text-center">
+                    {['fallido', 'pendiente'].includes(pago.estado_pago) && (
+                      <button
+                        onclick={`eliminarPago(${pago.pago_id}, '${pago.estado_pago}')`}
+                        class="text-rose-600 hover:text-rose-800 font-semibold hover:bg-rose-50 p-2 rounded-lg transition-colors"
+                        title="Eliminar Permanentemente"
+                      >
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
+                        </svg>
+                      </button>
+                    )}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal Procesar Pago -->
+  <div id="modal-procesar" class="hidden fixed inset-0 bg-black/60 backdrop-blur-sm overflow-y-auto h-full w-full z-50 flex items-center justify-center p-4">
+    <div class="relative bg-white rounded-2xl shadow-2xl max-w-2xl w-full animate-slideIn">
+      <div class="bg-gradient-to-r from-green-600 to-emerald-600 rounded-t-2xl px-6 py-5">
+        <h3 class="text-2xl font-bold text-white flex items-center gap-2">
+          <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z"/>
+          </svg>
+          Procesar Pago
+        </h3>
+      </div>
+      
+      <form action="/api/pagos" method="POST" class="p-6">
+        <div class="space-y-5">
+          <div>
+            <label class="block text-sm font-semibold text-slate-700 mb-2">
+              Pedido Pendiente <span class="text-red-500">*</span>
+            </label>
+            <select
+              name="pedido_id"
+              id="select-pedido"
+              required
+              onchange="actualizarMonto()"
+              class="w-full px-4 py-3 border-2 border-slate-300 rounded-xl focus:ring-2 focus:ring-green-500 focus:border-transparent transition-all duration-200 outline-none"
+            >
+              <option value="">Seleccionar pedido...</option>
+              {pedidosPendientes.map((pedido) => (
+                <option value={pedido.pedido_id} data-monto={pedido.total_pedido}>
+                  Pedido #{pedido.pedido_id} - {pedido.nombre} {pedido.apellido} - ${parseFloat(pedido.total_pedido).toFixed(2)}
+                </option>
+              ))}
+            </select>
+            {pedidosPendientes.length === 0 && (
+              <p class="mt-2 text-sm text-slate-500">No hay pedidos pendientes de pago</p>
+            )}
+          </div>
+
+          <div>
+            <label class="block text-sm font-semibold text-slate-700 mb-2">
+              Monto <span class="text-red-500">*</span>
+            </label>
+            <input
+              type="number"
+              step="0.01"
+              name="monto"
+              id="input-monto"
+              required
+              readonly
+              class="w-full px-4 py-3 border-2 border-slate-300 rounded-xl bg-slate-50 text-slate-700 font-bold text-lg"
+              placeholder="0.00"
+            />
+            <p class="mt-1 text-xs text-slate-500">El monto se ajusta automáticamente según el pedido seleccionado</p>
+          </div>
+
+          <div>
+            <label class="block text-sm font-semibold text-slate-700 mb-2">
+              Método de Pago <span class="text-red-500">*</span>
+            </label>
+            <select
+              name="metodo_pago"
+              required
+              class="w-full px-4 py-3 border-2 border-slate-300 rounded-xl focus:ring-2 focus:ring-green-500 focus:border-transparent transition-all duration-200 outline-none"
+            >
+              <option value="">Seleccionar método...</option>
+              <option value="tarjeta_credito">Tarjeta de Crédito</option>
+              <option value="tarjeta_debito">Tarjeta de Débito</option>
+              <option value="paypal">PayPal</option>
+              <option value="stripe">Stripe</option>
+              <option value="transferencia">Transferencia Bancaria</option>
+              <option value="efectivo">Efectivo</option>
+            </select>
+          </div>
+
+          <div>
+            <label class="block text-sm font-semibold text-slate-700 mb-2">
+              ID de Transacción Externa
+            </label>
+            <input
+              type="text"
+              name="id_transaccion_externa"
+              placeholder="Ej: txn_1A2B3C4D5E6F (opcional)"
+              class="w-full px-4 py-3 border-2 border-slate-300 rounded-xl focus:ring-2 focus:ring-green-500 focus:border-transparent transition-all duration-200 outline-none"
+            />
+            <p class="mt-1 text-xs text-slate-500">ID de Stripe, PayPal u otro procesador de pagos</p>
+          </div>
+
+          <div class="bg-green-50 border-l-4 border-green-500 p-3 rounded">
+            <p class="text-sm text-green-800">
+              <svg class="w-4 h-4 inline mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+              </svg>
+              Al procesar el pago, el pedido pasará a estado "pagado" y se creará un envío automáticamente
+            </p>
+          </div>
+        </div>
+        
+        <div class="flex gap-3 mt-6">
+          <button
+            type="submit"
+            class="flex-1 bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white font-semibold py-3 px-4 rounded-xl shadow-lg hover:shadow-xl transition-all duration-200 transform hover:scale-105"
+          >
+            Procesar Pago
+          </button>
+          <button
+            type="button"
+            onclick="document.getElementById('modal-procesar').classList.add('hidden')"
+            class="px-6 bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold py-3 rounded-xl transition-all duration-200"
+          >
+            Cancelar
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <script is:inline>
+    function actualizarMonto() {
+      const select = document.getElementById('select-pedido');
+      const input = document.getElementById('input-monto');
+      const selectedOption = select.options[select.selectedIndex];
+      
+      if (selectedOption.value) {
+        const monto = selectedOption.getAttribute('data-monto');
+        input.value = parseFloat(monto).toFixed(2);
+      } else {
+        input.value = '';
+      }
+    }
+
+    async function eliminarPago(pagoId, estadoPago) {
+      if (!confirm(`⚠️ ELIMINAR PAGO PERMANENTEMENTE\n\n¿Estás seguro de eliminar el pago #${pagoId}?\n\nEstado: ${estadoPago}\nEsta acción NO se puede deshacer.\n\nSOLO se pueden eliminar pagos fallidos o pendientes.`)) {
+        return;
+      }
+
+      if (!confirm(`Confirma nuevamente: ¿Eliminar pago #${pagoId} de la base de datos?`)) {
+        return;
+      }
+
+      try {
+        const formData = new FormData();
+        formData.append('_method', 'DELETE');
+        formData.append('pago_id', pagoId);
+
+        const response = await fetch('/api/pagos', {
+          method: 'POST',
+          body: formData
+        });
+
+        const url = new URL(response.url);
+        const error = url.searchParams.get('error');
+        
+        if (error) {
+          alert('❌ Error: ' + decodeURIComponent(error));
+          location.href = '/pagos';
+        } else if (response.redirected || response.ok) {
+          alert('✅ Pago eliminado exitosamente');
+          location.href = '/pagos';
+        } else {
+          alert('Error al eliminar el pago');
+        }
+      } catch (error) {
+        console.error('Error al eliminar pago:', error);
+        alert('Error al eliminar el pago');
+      }
+    }
+
+    // Cerrar modal con ESC
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape') {
+        document.getElementById('modal-procesar').classList.add('hidden');
+      }
+    });
+
+    // Cerrar modal al hacer clic fuera
+    const modal = document.getElementById('modal-procesar');
+    if (modal) {
+      modal.addEventListener('click', (e) => {
+        if (e.target.id === 'modal-procesar') {
+          e.target.classList.add('hidden');
+        }
+      });
+    }
+  </script>
+</Layout>

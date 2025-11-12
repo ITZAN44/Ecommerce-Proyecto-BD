@@ -1,0 +1,81 @@
+---
+import '../styles/global.css';
+
+// Layout base para todas las páginas
+interface Props {
+  title: string;
+  description?: string;
+}
+
+const { title, description = 'Sistema de E-commerce con PostgreSQL' } = Astro.props;
+---
+
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content={description}>
+  <title>{title} | E-commerce BS2</title>
+  <link rel="icon" type="image/svg+xml" href="/favicon.svg">
+</head>
+<body class="bg-gray-50 min-h-screen">
+  <nav class="bg-white shadow-lg border-b border-gray-200">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div class="flex justify-between h-16">
+        <div class="flex">
+          <div class="shrink-0 flex items-center">
+            <a href="/" class="text-2xl font-bold text-blue-600">
+              🛒 E-commerce
+            </a>
+          </div>
+          <div class="hidden sm:ml-6 sm:flex sm:space-x-8">
+            <a href="/" class="border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700 inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium">
+              Dashboard
+            </a>
+            <a href="/categorias" class="border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700 inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium">
+              Categorías
+            </a>
+            <a href="/productos" class="border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700 inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium">
+              Productos
+            </a>
+            <a href="/stock" class="border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700 inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium">
+              Stock
+            </a>
+            <a href="/cupones" class="border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700 inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium">
+              Cupones
+            </a>
+            <a href="/pagos" class="border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700 inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium">
+              Pagos
+            </a>
+            <a href="/clientes" class="border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700 inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium">
+              Clientes
+            </a>
+            <a href="/pedidos" class="border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700 inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium">
+              Pedidos
+            </a>
+            <a href="/envios" class="border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700 inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium">
+              Envíos
+            </a>
+            <a href="/devoluciones" class="border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700 inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium">
+              Devoluciones
+            </a>
+          </div>
+        </div>
+      </div>
+    </div>
+  </nav>
+
+  <main class="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8">
+    <slot />
+  </main>
+
+  <footer class="bg-white border-t border-gray-200 mt-12">
+    <div class="max-w-7xl mx-auto py-6 px-4 sm:px-6 lg:px-8">
+      <p class="text-center text-gray-500 text-sm">
+        © 2025 E-commerce BS2 - Proyecto Universidad
+      </p>
+    </div>
+  </footer>
+</body>
+</html>

@@ -1,0 +1,625 @@
+---
+import Layout from '../../layouts/Layout.astro';
+import { query } from '../../lib/db';
+
+let stock: any[] = [];
+let productos: any[] = [];
+let error = '';
+
+try {
+  const resultStock = await query(`
+    SELECT s.stock_id, s.producto_id, s.sku, s.precio_unitario, 
+           s.cantidad_en_stock, s.cantidad_reservada, s.estado, s.fecha_creacion,
+           p.nombre_producto, c.nombre_categoria,
+           (s.cantidad_en_stock - s.cantidad_reservada) as disponible
+    FROM stock s
+    JOIN productos p ON s.producto_id = p.producto_id
+    JOIN categorias c ON p.categoria_id = c.categoria_id
+    WHERE c.estado = 'activo' AND p.estado = 'activo'
+    ORDER BY s.stock_id DESC
+  `);
+  stock = resultStock.rows;
+
+  const resultProductos = await query(`
+    SELECT p.producto_id, p.nombre_producto 
+    FROM productos p 
+    INNER JOIN categorias c ON p.categoria_id = c.categoria_id
+    WHERE p.estado = 'activo' AND c.estado = 'activo'
+    ORDER BY p.nombre_producto
+  `);
+  productos = resultProductos.rows;
+} catch (err) {
+  error = 'Error al cargar stock: ' + (err as Error).message;
+  console.error(err);
+}
+
+const activos = stock.filter(s => s.estado === 'activo').length;
+const inactivos = stock.filter(s => s.estado === 'inactivo').length;
+const totalStock = stock.reduce((sum, s) => sum + parseInt(s.cantidad_en_stock || 0), 0);
+const stockReservado = stock.reduce((sum, s) => sum + parseInt(s.cantidad_reservada || 0), 0);
+---
+
+<Layout title="Stock / Inventario">
+  <div class="min-h-screen bg-gradient-to-br from-slate-50 via-green-50 to-slate-50 py-8">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      
+      <!-- Header -->
+      <div class="mb-8">
+        <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+          <div>
+            <h1 class="text-4xl font-bold bg-gradient-to-r from-green-600 to-emerald-600 bg-clip-text text-transparent flex items-center gap-3">
+              <span class="text-4xl">📊</span> Inventario / Stock
+            </h1>
+            <p class="mt-2 text-slate-600">Gestiona SKUs, stock disponible y reabastecimientos</p>
+          </div>
+          <button
+            onclick="document.getElementById('modal-crear').classList.remove('hidden')"
+            class="inline-flex items-center px-6 py-3 bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white font-semibold rounded-xl shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-200"
+          >
+            <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
+            </svg>
+            Nuevo SKU
+          </button>
+        </div>
+      </div>
+
+      {error && (
+        <div class="mb-6 bg-red-50 border-l-4 border-red-500 p-4 rounded-lg">
+          <div class="flex items-center">
+            <svg class="w-5 h-5 text-red-500 mr-2" fill="currentColor" viewBox="0 0 20 20">
+              <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd"/>
+            </svg>
+            <p class="text-red-700 font-medium">{error}</p>
+          </div>
+        </div>
+      )}
+
+      <!-- Stats Cards -->
+      <div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+        <div class="bg-gradient-to-br from-green-500 to-emerald-600 rounded-2xl p-6 text-white shadow-xl transform hover:scale-105 transition-all duration-200">
+          <div class="flex items-center justify-between">
+            <div>
+              <p class="text-green-100 text-sm font-medium">Total SKUs</p>
+              <p class="text-4xl font-bold mt-2">{stock.length}</p>
+            </div>
+            <div class="bg-white/20 p-4 rounded-xl backdrop-blur-sm">
+              <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"/>
+              </svg>
+            </div>
+          </div>
+        </div>
+
+        <div class="bg-gradient-to-br from-blue-500 to-blue-600 rounded-2xl p-6 text-white shadow-xl transform hover:scale-105 transition-all duration-200">
+          <div class="flex items-center justify-between">
+            <div>
+              <p class="text-blue-100 text-sm font-medium">SKUs Activos</p>
+              <p class="text-4xl font-bold mt-2">{activos}</p>
+            </div>
+            <div class="bg-white/20 p-4 rounded-xl backdrop-blur-sm">
+              <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+              </svg>
+            </div>
+          </div>
+        </div>
+
+        <div class="bg-gradient-to-br from-purple-500 to-pink-600 rounded-2xl p-6 text-white shadow-xl transform hover:scale-105 transition-all duration-200">
+          <div class="flex items-center justify-between">
+            <div>
+              <p class="text-purple-100 text-sm font-medium">Stock Total</p>
+              <p class="text-4xl font-bold mt-2">{totalStock.toLocaleString()}</p>
+            </div>
+            <div class="bg-white/20 p-4 rounded-xl backdrop-blur-sm">
+              <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4"/>
+              </svg>
+            </div>
+          </div>
+        </div>
+
+        <div class="bg-gradient-to-br from-orange-500 to-red-600 rounded-2xl p-6 text-white shadow-xl transform hover:scale-105 transition-all duration-200">
+          <div class="flex items-center justify-between">
+            <div>
+              <p class="text-orange-100 text-sm font-medium">Stock Reservado</p>
+              <p class="text-4xl font-bold mt-2">{stockReservado.toLocaleString()}</p>
+            </div>
+            <div class="bg-white/20 p-4 rounded-xl backdrop-blur-sm">
+              <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/>
+              </svg>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Tabla de Stock -->
+      <div class="bg-white rounded-2xl shadow-xl overflow-hidden border border-slate-200">
+        <div class="overflow-x-auto">
+          <table class="min-w-full divide-y divide-slate-200">
+            <thead class="bg-gradient-to-r from-slate-50 to-slate-100">
+              <tr>
+                <th class="px-6 py-4 text-left text-xs font-bold text-slate-700 uppercase tracking-wider">SKU</th>
+                <th class="px-6 py-4 text-left text-xs font-bold text-slate-700 uppercase tracking-wider">Producto</th>
+                <th class="px-6 py-4 text-left text-xs font-bold text-slate-700 uppercase tracking-wider">Categoría</th>
+                <th class="px-6 py-4 text-left text-xs font-bold text-slate-700 uppercase tracking-wider">Precio</th>
+                <th class="px-6 py-4 text-left text-xs font-bold text-slate-700 uppercase tracking-wider">En Stock</th>
+                <th class="px-6 py-4 text-left text-xs font-bold text-slate-700 uppercase tracking-wider">Reservado</th>
+                <th class="px-6 py-4 text-left text-xs font-bold text-slate-700 uppercase tracking-wider">Disponible</th>
+                <th class="px-6 py-4 text-left text-xs font-bold text-slate-700 uppercase tracking-wider">Estado</th>
+                <th class="px-6 py-4 text-left text-xs font-bold text-slate-700 uppercase tracking-wider">Acciones</th>
+              </tr>
+            </thead>
+            <tbody class="bg-white divide-y divide-slate-200">
+              {stock.map((item) => (
+                <tr class="hover:bg-slate-50 transition-colors duration-150">
+                  <td class="px-6 py-4 whitespace-nowrap">
+                    <span class="font-mono text-sm font-semibold text-slate-700">{item.sku}</span>
+                  </td>
+                  <td class="px-6 py-4">
+                    <div class="text-sm font-semibold text-slate-900">{item.nombre_producto}</div>
+                  </td>
+                  <td class="px-6 py-4 whitespace-nowrap">
+                    <span class="text-sm text-slate-600">{item.nombre_categoria}</span>
+                  </td>
+                  <td class="px-6 py-4 whitespace-nowrap">
+                    <span class="text-sm font-bold text-green-600">${parseFloat(item.precio_unitario).toFixed(2)}</span>
+                  </td>
+                  <td class="px-6 py-4 whitespace-nowrap">
+                    <span class={`inline-flex items-center px-3 py-1 rounded-full text-sm font-bold ${
+                      item.cantidad_en_stock > 50 ? 'bg-green-100 text-green-800' :
+                      item.cantidad_en_stock > 10 ? 'bg-yellow-100 text-yellow-800' :
+                      'bg-red-100 text-red-800'
+                    }`}>
+                      {item.cantidad_en_stock}
+                    </span>
+                  </td>
+                  <td class="px-6 py-4 whitespace-nowrap">
+                    <span class="text-sm font-semibold text-orange-600">{item.cantidad_reservada}</span>
+                  </td>
+                  <td class="px-6 py-4 whitespace-nowrap">
+                    <span class={`inline-flex items-center px-3 py-1 rounded-full text-sm font-bold ${
+                      item.disponible > 20 ? 'bg-emerald-100 text-emerald-800' :
+                      item.disponible > 0 ? 'bg-amber-100 text-amber-800' :
+                      'bg-red-100 text-red-800'
+                    }`}>
+                      {item.disponible}
+                    </span>
+                  </td>
+                  <td class="px-6 py-4 whitespace-nowrap">
+                    <span class={`inline-flex px-3 py-1 text-xs font-bold rounded-full ${
+                      item.estado === 'activo' 
+                        ? 'bg-green-100 text-green-800' 
+                        : 'bg-slate-100 text-slate-800'
+                    }`}>
+                      {item.estado}
+                    </span>
+                  </td>
+                  <td class="px-6 py-4 whitespace-nowrap text-sm">
+                    <div class="flex gap-2">
+                      <button
+                        onclick={`reabastecer(${item.stock_id}, ${JSON.stringify(item.sku)}, ${JSON.stringify(item.nombre_producto)}, ${item.precio_unitario})`}
+                        class="text-green-600 hover:text-green-800 font-semibold hover:bg-green-50 p-2 rounded-lg transition-colors"
+                        title="Reabastecer"
+                      >
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"/>
+                        </svg>
+                      </button>
+                      <button
+                        onclick={`editar(${item.stock_id}, ${JSON.stringify(item.sku)}, ${item.producto_id}, ${item.precio_unitario}, ${item.cantidad_en_stock})`}
+                        class="text-blue-600 hover:text-blue-800 font-semibold hover:bg-blue-50 p-2 rounded-lg transition-colors"
+                        title="Editar"
+                      >
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
+                        </svg>
+                      </button>
+                      <button
+                        onclick={`cambiarEstado(${item.stock_id}, ${JSON.stringify(item.estado === 'activo' ? 'inactivo' : 'activo')})`}
+                        class={`font-semibold p-2 rounded-lg transition-colors ${
+                          item.estado === 'activo' 
+                            ? 'text-red-600 hover:text-red-800 hover:bg-red-50' 
+                            : 'text-green-600 hover:text-green-800 hover:bg-green-50'
+                        }`}
+                        title={item.estado === 'activo' ? 'Desactivar' : 'Activar'}
+                      >
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d={
+                            item.estado === 'activo' 
+                              ? "M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636"
+                              : "M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
+                          }/>
+                        </svg>
+                      </button>
+                      <button
+                        onclick={`eliminarStock(${item.stock_id}, '${item.sku.replace(/'/g, "\\'")}')`}
+                        class="text-rose-600 hover:text-rose-800 font-semibold hover:bg-rose-50 p-2 rounded-lg transition-colors"
+                        title="Eliminar Permanentemente"
+                      >
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
+                        </svg>
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal Crear SKU -->
+  <div id="modal-crear" class="hidden fixed inset-0 bg-black/60 backdrop-blur-sm overflow-y-auto h-full w-full z-50 flex items-center justify-center p-4">
+    <div class="relative bg-white rounded-2xl shadow-2xl max-w-lg w-full animate-slideIn">
+      <div class="bg-gradient-to-r from-green-600 to-emerald-600 rounded-t-2xl px-6 py-5">
+        <h3 class="text-2xl font-bold text-white flex items-center gap-2">
+          <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
+          </svg>
+          Crear Nuevo SKU
+        </h3>
+      </div>
+      
+      <form action="/api/stock" method="POST" class="p-6">
+        <div class="space-y-5">
+          <div>
+            <label class="block text-sm font-semibold text-slate-700 mb-2">
+              Producto <span class="text-red-500">*</span>
+            </label>
+            <select
+              name="producto_id"
+              required
+              class="w-full px-4 py-3 border-2 border-slate-300 rounded-xl focus:ring-2 focus:ring-green-500 focus:border-transparent transition-all duration-200 outline-none"
+            >
+              <option value="">Selecciona un producto</option>
+              {productos.map(p => (
+                <option value={p.producto_id}>{p.nombre_producto}</option>
+              ))}
+            </select>
+          </div>
+
+          <div>
+            <label class="block text-sm font-semibold text-slate-700 mb-2">
+              SKU <span class="text-red-500">*</span>
+            </label>
+            <input
+              type="text"
+              name="sku"
+              required
+              placeholder="Ej: PROD-001-XL"
+              class="w-full px-4 py-3 border-2 border-slate-300 rounded-xl focus:ring-2 focus:ring-green-500 focus:border-transparent transition-all duration-200 outline-none font-mono"
+            />
+          </div>
+
+          <div>
+            <label class="block text-sm font-semibold text-slate-700 mb-2">
+              Precio Unitario <span class="text-red-500">*</span>
+            </label>
+            <div class="relative">
+              <span class="absolute left-4 top-3 text-slate-500 font-semibold">$</span>
+              <input
+                type="number"
+                name="precio_unitario"
+                required
+                min="0"
+                step="0.01"
+                class="w-full pl-8 pr-4 py-3 border-2 border-slate-300 rounded-xl focus:ring-2 focus:ring-green-500 focus:border-transparent transition-all duration-200 outline-none"
+              />
+            </div>
+          </div>
+
+          <div>
+            <label class="block text-sm font-semibold text-slate-700 mb-2">
+              Cantidad Inicial <span class="text-red-500">*</span>
+            </label>
+            <input
+              type="number"
+              name="cantidad_en_stock"
+              required
+              min="0"
+              value="0"
+              class="w-full px-4 py-3 border-2 border-slate-300 rounded-xl focus:ring-2 focus:ring-green-500 focus:border-transparent transition-all duration-200 outline-none"
+            />
+          </div>
+        </div>
+        
+        <div class="flex gap-3 mt-6">
+          <button
+            type="submit"
+            class="flex-1 bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white font-semibold py-3 px-4 rounded-xl shadow-lg hover:shadow-xl transition-all duration-200 transform hover:scale-105"
+          >
+            Crear SKU
+          </button>
+          <button
+            type="button"
+            onclick="document.getElementById('modal-crear').classList.add('hidden')"
+            class="px-6 bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold py-3 rounded-xl transition-all duration-200"
+          >
+            Cancelar
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Modal Editar SKU -->
+  <div id="modal-editar" class="hidden fixed inset-0 bg-black/60 backdrop-blur-sm overflow-y-auto h-full w-full z-50 flex items-center justify-center p-4">
+    <div class="relative bg-white rounded-2xl shadow-2xl max-w-lg w-full animate-slideIn">
+      <div class="bg-gradient-to-r from-blue-600 to-blue-700 rounded-t-2xl px-6 py-5">
+        <h3 class="text-2xl font-bold text-white flex items-center gap-2">
+          <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
+          </svg>
+          Editar SKU
+        </h3>
+      </div>
+      
+      <form action="/api/stock" method="POST" class="p-6">
+        <input type="hidden" name="_method" value="PUT" />
+        <input type="hidden" name="stock_id" id="edit-stock-id" />
+        
+        <div class="space-y-5">
+          <div>
+            <label class="block text-sm font-semibold text-slate-700 mb-2">
+              Producto <span class="text-red-500">*</span>
+            </label>
+            <select
+              name="producto_id"
+              id="edit-producto"
+              required
+              class="w-full px-4 py-3 border-2 border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 outline-none"
+            >
+              {productos.map(p => (
+                <option value={p.producto_id}>{p.nombre_producto}</option>
+              ))}
+            </select>
+          </div>
+
+          <div>
+            <label class="block text-sm font-semibold text-slate-700 mb-2">
+              SKU <span class="text-red-500">*</span>
+            </label>
+            <input
+              type="text"
+              name="sku"
+              id="edit-sku"
+              required
+              class="w-full px-4 py-3 border-2 border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 outline-none font-mono"
+            />
+          </div>
+
+          <div>
+            <label class="block text-sm font-semibold text-slate-700 mb-2">
+              Precio Unitario <span class="text-red-500">*</span>
+            </label>
+            <div class="relative">
+              <span class="absolute left-4 top-3 text-slate-500 font-semibold">$</span>
+              <input
+                type="number"
+                name="precio_unitario"
+                id="edit-precio"
+                required
+                min="0"
+                step="0.01"
+                class="w-full pl-8 pr-4 py-3 border-2 border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 outline-none"
+              />
+            </div>
+          </div>
+
+          <div class="bg-blue-50 border-l-4 border-blue-500 p-4 rounded">
+            <p class="text-sm text-blue-800">
+              <svg class="w-4 h-4 inline mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+              </svg>
+              Para modificar la cantidad en stock, usa el botón <strong>"Reabastecer Stock"</strong> (➕)
+            </p>
+          </div>
+        </div>
+        
+        <div class="flex gap-3 mt-6">
+          <button
+            type="submit"
+            class="flex-1 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white font-semibold py-3 px-4 rounded-xl shadow-lg hover:shadow-xl transition-all duration-200 transform hover:scale-105"
+          >
+            Guardar Cambios
+          </button>
+          <button
+            type="button"
+            onclick="document.getElementById('modal-editar').classList.add('hidden')"
+            class="px-6 bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold py-3 rounded-xl transition-all duration-200"
+          >
+            Cancelar
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Modal Reabastecer (Stored Procedure) -->
+  <div id="modal-reabastecer" class="hidden fixed inset-0 bg-black/60 backdrop-blur-sm overflow-y-auto h-full w-full z-50 flex items-center justify-center p-4">
+    <div class="relative bg-white rounded-2xl shadow-2xl max-w-lg w-full animate-slideIn">
+      <div class="bg-gradient-to-r from-green-600 to-emerald-700 rounded-t-2xl px-6 py-5">
+        <h3 class="text-2xl font-bold text-white flex items-center gap-2">
+          <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"/>
+          </svg>
+          Reabastecer Stock
+        </h3>
+      </div>
+      
+      <form action="/api/stock/reabastecer" method="POST" class="p-6">
+        <input type="hidden" name="stock_id" id="reab-stock-id" />
+        
+        <div class="bg-blue-50 border-l-4 border-blue-500 p-4 mb-6 rounded">
+          <p class="text-sm text-blue-700">
+            <strong>💡 Procedimiento Almacenado:</strong> Esta acción usa <code class="bg-blue-100 px-2 py-1 rounded">sp_reabastecer_stock()</code>
+          </p>
+        </div>
+
+        <div class="bg-slate-50 p-4 rounded-xl mb-5">
+          <p class="text-sm text-slate-600 mb-1">SKU: <span id="reab-sku" class="font-mono font-bold text-slate-900"></span></p>
+          <p class="text-sm text-slate-600">Producto: <span id="reab-producto" class="font-semibold text-slate-900"></span></p>
+        </div>
+        
+        <div class="space-y-5">
+          <div>
+            <label class="block text-sm font-semibold text-slate-700 mb-2">
+              Cantidad a Agregar <span class="text-red-500">*</span>
+            </label>
+            <input
+              type="number"
+              name="cantidad"
+              required
+              min="1"
+              placeholder="Ej: 100"
+              class="w-full px-4 py-3 border-2 border-slate-300 rounded-xl focus:ring-2 focus:ring-green-500 focus:border-transparent transition-all duration-200 outline-none"
+            />
+          </div>
+
+          <div>
+            <label class="block text-sm font-semibold text-slate-700 mb-2">
+              Nuevo Costo Unitario (Opcional)
+            </label>
+            <div class="relative">
+              <span class="absolute left-4 top-3 text-slate-500 font-semibold">$</span>
+              <input
+                type="number"
+                name="costo_unitario"
+                id="reab-precio"
+                min="0"
+                step="0.01"
+                placeholder="Dejar vacío para mantener precio actual"
+                class="w-full pl-8 pr-4 py-3 border-2 border-slate-300 rounded-xl focus:ring-2 focus:ring-green-500 focus:border-transparent transition-all duration-200 outline-none"
+              />
+            </div>
+            <p class="mt-2 text-xs text-slate-500">Si especificas un costo, se actualizará el precio del SKU</p>
+          </div>
+        </div>
+        
+        <div class="flex gap-3 mt-6">
+          <button
+            type="submit"
+            class="flex-1 bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white font-semibold py-3 px-4 rounded-xl shadow-lg hover:shadow-xl transition-all duration-200 transform hover:scale-105"
+          >
+            Reabastecer
+          </button>
+          <button
+            type="button"
+            onclick="document.getElementById('modal-reabastecer').classList.add('hidden')"
+            class="px-6 bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold py-3 rounded-xl transition-all duration-200"
+          >
+            Cancelar
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <script is:inline>
+    // Definir funciones en el scope global explícitamente
+    window.editar = function(stock_id, sku, producto_id, precio, cantidad) {
+      document.getElementById('edit-stock-id').value = stock_id;
+      document.getElementById('edit-sku').value = sku;
+      document.getElementById('edit-producto').value = producto_id;
+      document.getElementById('edit-precio').value = precio;
+      // No se edita cantidad aquí, solo con Reabastecer
+      document.getElementById('modal-editar').classList.remove('hidden');
+    }
+
+    window.reabastecer = function(stock_id, sku, producto, precioActual) {
+      document.getElementById('reab-stock-id').value = stock_id;
+      document.getElementById('reab-sku').textContent = sku;
+      document.getElementById('reab-producto').textContent = producto;
+      document.getElementById('reab-precio').placeholder = `Precio actual: $${parseFloat(precioActual).toFixed(2)}`;
+      document.getElementById('modal-reabastecer').classList.remove('hidden');
+    }
+
+    window.cambiarEstado = async function(stock_id, nuevoEstado) {
+      if (!confirm(`¿Estás seguro de ${nuevoEstado === 'activo' ? 'activar' : 'desactivar'} este SKU?`)) return;
+      
+      try {
+        const formData = new FormData();
+        formData.append('_method', 'PATCH');
+        formData.append('stock_id', stock_id);
+        formData.append('estado', nuevoEstado);
+        
+        const response = await fetch('/api/stock', {
+          method: 'POST',
+          body: formData
+        });
+        
+        if (response.ok) {
+          location.reload();
+        } else {
+          alert('Error al cambiar el estado');
+        }
+      } catch (error) {
+        console.error('Error:', error);
+        alert('Error al cambiar el estado');
+      }
+    }
+
+    window.eliminarStock = async function(stockId, sku) {
+      if (!confirm(`⚠️ ELIMINAR PERMANENTEMENTE\n\n¿Estás seguro de eliminar el SKU "${sku}"?\n\nEsta acción NO se puede deshacer y solo funciona si el stock NO está reservado ni en pedidos.`)) {
+        return;
+      }
+
+      if (!confirm(`Confirma nuevamente: ¿Eliminar SKU "${sku}" de la base de datos?`)) {
+        return;
+      }
+
+      try {
+        const response = await fetch('/api/stock', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            _method: 'DELETE',
+            stock_id: stockId
+          })
+        });
+
+        const url = new URL(response.url);
+        const error = url.searchParams.get('error');
+        
+        if (error) {
+          alert('❌ Error: ' + decodeURIComponent(error));
+          location.href = '/stock';
+        } else if (response.redirected || response.ok) {
+          alert('✅ Stock eliminado exitosamente');
+          location.href = '/stock';
+        } else {
+          alert('Error al eliminar el stock');
+        }
+      } catch (error) {
+        console.error('Error al eliminar stock:', error);
+        alert('Error al eliminar el stock');
+      }
+    }
+
+    // Cerrar modales con ESC
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape') {
+        document.getElementById('modal-crear').classList.add('hidden');
+        document.getElementById('modal-editar').classList.add('hidden');
+        document.getElementById('modal-reabastecer').classList.add('hidden');
+      }
+    });
+
+    // Cerrar modales al hacer clic fuera
+    ['modal-crear', 'modal-editar', 'modal-reabastecer'].forEach(modalId => {
+      const modal = document.getElementById(modalId);
+      if (modal) {
+        modal.addEventListener('click', (e) => {
+          if (e.target.id === modalId) {
+            e.target.classList.add('hidden');
+          }
+        });
+      }
+    });
+  </script>
+</Layout>
