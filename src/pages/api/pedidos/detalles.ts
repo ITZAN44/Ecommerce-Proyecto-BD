@@ -1,11 +1,10 @@
 import type { APIRoute } from 'astro';
-import { query } from '../../../../lib/db';
+import { query } from '../../../lib/db';
 
-// Endpoint para obtener detalles de un pedido específico
 export const GET: APIRoute = async ({ url }) => {
   try {
     const pedidoId = url.searchParams.get('pedido_id');
-    
+
     if (!pedidoId) {
       return new Response(JSON.stringify({ error: 'pedido_id requerido' }), {
         status: 400,
@@ -14,7 +13,7 @@ export const GET: APIRoute = async ({ url }) => {
     }
 
     const result = await query(`
-      SELECT 
+      SELECT
         dp.detalle_id,
         dp.pedido_id,
         dp.stock_id,

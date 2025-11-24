@@ -4,7 +4,7 @@ import { query } from '../../../lib/db';
 export const GET: APIRoute = async () => {
   try {
     const result = await query(`
-      SELECT s.stock_id, s.producto_id, s.sku, s.precio_unitario, 
+      SELECT s.stock_id, s.producto_id, s.sku, s.precio_unitario,
              s.cantidad_en_stock, s.cantidad_reservada, s.estado, s.fecha_creacion,
              p.nombre_producto, c.nombre_categoria
       FROM stock s
@@ -12,7 +12,7 @@ export const GET: APIRoute = async () => {
       JOIN categorias c ON p.categoria_id = c.categoria_id
       ORDER BY s.stock_id DESC
     `);
-    
+
     return new Response(JSON.stringify(result.rows), {
       status: 200,
       headers: { 'Content-Type': 'application/json' }
@@ -38,10 +38,9 @@ export const POST: APIRoute = async ({ request }) => {
       data = Object.fromEntries(formData.entries());
     }
 
-    // Actualizar SKU (PUT) - Solo SKU, producto y precio, NO cantidad
     if (data._method === 'PUT') {
       await query(
-        `UPDATE stock 
+        `UPDATE stock
          SET sku = $1, producto_id = $2, precio_unitario = $3
          WHERE stock_id = $4`,
         [
@@ -57,7 +56,6 @@ export const POST: APIRoute = async ({ request }) => {
       });
     }
 
-    // Cambiar estado (PATCH)
     if (data._method === 'PATCH') {
       await query(
         'UPDATE stock SET estado = $1 WHERE stock_id = $2',
@@ -69,11 +67,10 @@ export const POST: APIRoute = async ({ request }) => {
       });
     }
 
-    // Eliminar stock físicamente (DELETE)
     if (data._method === 'DELETE') {
       try {
         await query('CALL sp_eliminar_stock($1)', [parseInt(data.stock_id)]);
-        
+
         return new Response(null, {
           status: 302,
           headers: { Location: '/stock' }
@@ -81,14 +78,13 @@ export const POST: APIRoute = async ({ request }) => {
       } catch (deleteError: any) {
         return new Response(null, {
           status: 302,
-          headers: { 
+          headers: {
             Location: '/stock?error=' + encodeURIComponent(deleteError.message || 'Error al eliminar stock')
           }
         });
       }
     }
 
-    // Crear nuevo SKU
     await query(
       `INSERT INTO stock (producto_id, sku, precio_unitario, cantidad_en_stock, cantidad_reservada)
        VALUES ($1, $2, $3, $4, 0)`,

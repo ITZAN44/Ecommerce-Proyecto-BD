@@ -1,0 +1,98 @@
+---
+import ChartWrapper from './ChartWrapper.astro';
+
+interface Props {
+  title?: string;
+  chartId: string;
+  apiEndpoint: string;
+  height?: number;
+}
+
+const { title, chartId, apiEndpoint, height } = Astro.props;
+---
+
+<ChartWrapper chartId={chartId} title={title} height={height}>
+  <script is:inline data-chart-id={chartId} data-api-endpoint={apiEndpoint}>
+    (function() {
+      const script = document.currentScript;
+      const chartId = script.getAttribute('data-chart-id');
+      const apiEndpoint = script.getAttribute('data-api-endpoint');
+
+      async function initBarChart() {
+        if (!window.Chart) return;
+
+        try {
+          const response = await fetch(apiEndpoint);
+          if (!response.ok) return;
+
+          const data = await response.json();
+          if (!data || data.length === 0) return;
+
+          const canvas = document.getElementById(chartId);
+          if (!canvas) return;
+
+          const colors = [
+            'rgba(59, 130, 246, 0.8)',
+            'rgba(16, 185, 129, 0.8)',
+            'rgba(245, 158, 11, 0.8)',
+            'rgba(139, 92, 246, 0.8)',
+            'rgba(236, 72, 153, 0.8)'
+          ];
+
+          new Chart(canvas, {
+            type: 'bar',
+            data: {
+              labels: data.map(item => item.nombre_categoria || item.nombre),
+              datasets: [{
+                label: 'Ventas ($)',
+                data: data.map(item => parseFloat(item.total_ventas || 0)),
+                backgroundColor: colors.slice(0, data.length),
+                borderWidth: 0
+              }]
+            },
+            options: {
+              responsive: true,
+              maintainAspectRatio: false,
+              plugins: {
+                legend: { display: false },
+                tooltip: {
+                  callbacks: {
+                    label: function(context) {
+                      return '$' + context.parsed.y.toLocaleString('es-ES', { minimumFractionDigits: 2 });
+                    }
+                  }
+                }
+              },
+              scales: {
+                y: {
+                  beginAtZero: true,
+                  ticks: {
+                    callback: function(value) {
+                      return '$' + value.toLocaleString('es-ES');
+                    }
+                  }
+                }
+              }
+            }
+          });
+        } catch (error) {
+          console.error('Error loading bar chart:', error);
+        }
+      }
+
+      function waitForChart() {
+        if (window.Chart) {
+          setTimeout(initBarChart, 100);
+        } else {
+          setTimeout(waitForChart, 100);
+        }
+      }
+
+      if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', waitForChart);
+      } else {
+        waitForChart();
+      }
+    })();
+  </script>
+</ChartWrapper>

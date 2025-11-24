@@ -1,0 +1,115 @@
+---
+import ChartWrapper from './ChartWrapper.astro';
+
+interface Props {
+  title?: string;
+  chartId: string;
+  apiEndpoint: string;
+  height?: number;
+}
+
+const { title, chartId, apiEndpoint, height } = Astro.props;
+---
+
+<ChartWrapper chartId={chartId} title={title} height={height}>
+  <script is:inline data-chart-id={chartId} data-api-endpoint={apiEndpoint}>
+    (function() {
+      const script = document.currentScript;
+      const chartId = script.getAttribute('data-chart-id');
+      const apiEndpoint = script.getAttribute('data-api-endpoint');
+
+      async function initLineChart() {
+        if (!window.Chart) return;
+
+        try {
+          const response = await fetch(apiEndpoint);
+          if (!response.ok) return;
+
+          const data = await response.json();
+          if (!data || data.length === 0) return;
+
+          const canvas = document.getElementById(chartId);
+          if (!canvas) return;
+
+          const hasVentasData = data[0] && ('total_ventas' in data[0] || 'total' in data[0]);
+          const hasPedidosData = data[0] && 'total_pedidos' in data[0];
+
+          const chartData = hasVentasData
+            ? data.map(item => parseFloat(item.total_ventas || item.total || 0))
+            : data.map(item => parseFloat(item.total_pedidos || 0));
+
+          const label = hasVentasData ? 'Ventas ($)' : 'Pedidos';
+          const isMoneyFormat = hasVentasData;
+
+          new Chart(canvas, {
+            type: 'line',
+            data: {
+              labels: data.map(item => {
+                const date = new Date(item.fecha);
+                return date.toLocaleDateString('es-ES', { day: '2-digit', month: 'short' });
+              }),
+              datasets: [{
+                label: label,
+                data: chartData,
+                borderColor: 'rgb(59, 130, 246)',
+                backgroundColor: 'rgba(59, 130, 246, 0.1)',
+                tension: 0.4,
+                fill: true,
+                pointRadius: 4,
+                pointHoverRadius: 6
+              }]
+            },
+            options: {
+              responsive: true,
+              maintainAspectRatio: false,
+              plugins: {
+                legend: { display: true },
+                tooltip: {
+                  callbacks: {
+                    label: function(context) {
+                      if (isMoneyFormat) {
+                        return '$' + context.parsed.y.toLocaleString('es-ES', { minimumFractionDigits: 2 });
+                      } else {
+                        return context.parsed.y + ' pedidos';
+                      }
+                    }
+                  }
+                }
+              },
+              scales: {
+                y: {
+                  beginAtZero: true,
+                  ticks: {
+                    callback: function(value) {
+                      if (isMoneyFormat) {
+                        return '$' + value.toLocaleString('es-ES');
+                      } else {
+                        return value;
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          });
+        } catch (error) {
+          console.error('Error loading line chart:', error);
+        }
+      }
+
+      function waitForChart() {
+        if (window.Chart) {
+          setTimeout(initLineChart, 100);
+        } else {
+          setTimeout(waitForChart, 100);
+        }
+      }
+
+      if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', waitForChart);
+      } else {
+        waitForChart();
+      }
+    })();
+  </script>
+</ChartWrapper>

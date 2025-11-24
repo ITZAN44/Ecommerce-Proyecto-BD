@@ -1,12 +1,11 @@
 import type { APIRoute } from 'astro';
 import { query } from '../../../lib/db';
 
-// Endpoint para calcular monto de reembolso
 export const GET: APIRoute = async ({ url }) => {
   try {
     const detalleId = url.searchParams.get('detalle_id');
     const cantidad = url.searchParams.get('cantidad');
-    
+
     if (!detalleId || !cantidad) {
       return new Response(JSON.stringify({ error: 'detalle_id y cantidad requeridos' }), {
         status: 400,
@@ -25,8 +24,8 @@ export const GET: APIRoute = async ({ url }) => {
     });
   } catch (error) {
     console.error('Error al calcular reembolso:', error);
-    return new Response(JSON.stringify({ 
-      error: (error as Error).message || 'Error al calcular reembolso' 
+    return new Response(JSON.stringify({
+      error: (error as Error).message || 'Error al calcular reembolso'
     }), {
       status: 500,
       headers: { 'Content-Type': 'application/json' }

@@ -1,0 +1,104 @@
+---
+import ChartWrapper from './ChartWrapper.astro';
+
+interface Props {
+  title?: string;
+  chartId: string;
+  apiEndpoint: string;
+  height?: number;
+}
+
+const { title, chartId, apiEndpoint, height } = Astro.props;
+---
+
+<ChartWrapper chartId={chartId} title={title} height={height}>
+  <script is:inline data-chart-id={chartId} data-api-endpoint={apiEndpoint}>
+    (function() {
+      const script = document.currentScript;
+      const chartId = script.getAttribute('data-chart-id');
+      const apiEndpoint = script.getAttribute('data-api-endpoint');
+
+      async function initDoughnutChart() {
+        if (!window.Chart) return;
+
+        try {
+          const response = await fetch(apiEndpoint);
+          if (!response.ok) return;
+
+          const data = await response.json();
+          if (!data || data.length === 0) return;
+
+          const canvas = document.getElementById(chartId);
+          if (!canvas) return;
+
+          const colorMap = {
+            'pendiente': 'rgba(245, 158, 11, 0.8)',
+            'pagado': 'rgba(59, 130, 246, 0.8)',
+            'enviado': 'rgba(139, 92, 246, 0.8)',
+            'completado': 'rgba(16, 185, 129, 0.8)',
+            'cancelado': 'rgba(239, 68, 68, 0.8)'
+          };
+
+          const labels = data.map(item => {
+            const estado = item.estado_pedido || '';
+            return estado.charAt(0).toUpperCase() + estado.slice(1);
+          });
+
+          const colors = data.map(item =>
+            colorMap[item.estado_pedido?.toLowerCase()] || 'rgba(156, 163, 175, 0.8)'
+          );
+
+          new Chart(canvas, {
+            type: 'doughnut',
+            data: {
+              labels: labels,
+              datasets: [{
+                data: data.map(item => parseFloat(item.cantidad || 0)),
+                backgroundColor: colors,
+                borderWidth: 2,
+                borderColor: '#1f2937'
+              }]
+            },
+            options: {
+              responsive: true,
+              maintainAspectRatio: false,
+              plugins: {
+                legend: {
+                  display: true,
+                  position: 'bottom'
+                },
+                tooltip: {
+                  callbacks: {
+                    label: function(context) {
+                      const value = context.parsed;
+                      const total = context.dataset.data.reduce((a, b) => a + b, 0);
+                      const percentage = ((value / total) * 100).toFixed(1);
+                      return context.label + ': ' + value + ' (' + percentage + '%)';
+                    }
+                  }
+                }
+              },
+              cutout: '60%'
+            }
+          });
+        } catch (error) {
+          console.error('Error loading doughnut chart:', error);
+        }
+      }
+
+      function waitForChart() {
+        if (window.Chart) {
+          setTimeout(initDoughnutChart, 100);
+        } else {
+          setTimeout(waitForChart, 100);
+        }
+      }
+
+      if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', waitForChart);
+      } else {
+        waitForChart();
+      }
+    })();
+  </script>
+</ChartWrapper>

@@ -1,13 +1,28 @@
 ---
 import '../styles/global.css';
+import Icon from '../components/Icon.astro';
 
-// Layout base para todas las páginas
 interface Props {
   title: string;
   description?: string;
 }
 
 const { title, description = 'Sistema de E-commerce con PostgreSQL' } = Astro.props;
+
+const currentPath = Astro.url.pathname;
+
+const navItems = [
+  { href: '/', label: 'Dashboard', icon: 'home' },
+  { href: '/productos', label: 'Productos', icon: 'shopping-bag' },
+  { href: '/categorias', label: 'Categorías', icon: 'tag' },
+  { href: '/stock', label: 'Inventario', icon: 'cube' },
+  { href: '/clientes', label: 'Clientes', icon: 'users' },
+  { href: '/pedidos', label: 'Pedidos', icon: 'rectangle-stack' },
+  { href: '/pagos', label: 'Pagos', icon: 'credit-card' },
+  { href: '/envios', label: 'Envíos', icon: 'truck' },
+  { href: '/cupones', label: 'Cupones', icon: 'ticket' },
+  { href: '/devoluciones', label: 'Devoluciones', icon: 'arrow-path' },
+];
 ---
 
 <!DOCTYPE html>
@@ -18,64 +33,151 @@ const { title, description = 'Sistema de E-commerce con PostgreSQL' } = Astro.pr
   <meta name="description" content={description}>
   <title>{title} | E-commerce BS2</title>
   <link rel="icon" type="image/svg+xml" href="/favicon.svg">
+  <script src="https:
 </head>
-<body class="bg-gray-50 min-h-screen">
-  <nav class="bg-white shadow-lg border-b border-gray-200">
-    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-      <div class="flex justify-between h-16">
-        <div class="flex">
-          <div class="shrink-0 flex items-center">
-            <a href="/" class="text-2xl font-bold text-blue-600">
-              🛒 E-commerce
-            </a>
+<body>
+  <div class="flex h-screen overflow-hidden">
+
+    <aside id="sidebar" class="w-64 shrink-0 border-r transition-all duration-300 ease-in-out overflow-y-auto"
+           style="background-color: var(--bg-secondary); border-color: var(--border-primary);">
+
+      <div class="h-16 flex items-center justify-between px-6 border-b" style="border-color: var(--border-primary);">
+        <a href="/" class="flex items-center space-x-3 group">
+          <div class="w-8 h-8 rounded-lg flex items-center justify-center transition-all"
+               style="background-color: var(--accent-blue);">
+            <Icon name="shopping-bag" class="text-white" size={20} />
           </div>
-          <div class="hidden sm:ml-6 sm:flex sm:space-x-8">
-            <a href="/" class="border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700 inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium">
-              Dashboard
+          <span class="text-lg font-bold" style="color: var(--text-primary);">E-commerce</span>
+        </a>
+        <button id="sidebarToggle" class="lg:hidden p-1 rounded-md hover:bg-opacity-10"
+                style="color: var(--text-secondary);">
+          <Icon name="x-mark" size={20} />
+        </button>
+      </div>
+
+      <nav class="p-4 space-y-1">
+        {navItems.map(item => {
+          const isActive = currentPath === item.href ||
+                          (item.href !== '/' && currentPath.startsWith(item.href));
+          return (
+            <a
+              href={item.href}
+              class={`flex items-center space-x-3 px-4 py-3 rounded-lg transition-all duration-200 group ${
+                isActive ? 'nav-item-active' : 'nav-item'
+              }`}
+            >
+              <Icon
+                name={item.icon}
+                size={20}
+                class={isActive ? 'text-white' : 'group-hover:scale-110 transition-transform'}
+              />
+              <span class="font-medium">{item.label}</span>
             </a>
-            <a href="/categorias" class="border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700 inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium">
-              Categorías
-            </a>
-            <a href="/productos" class="border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700 inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium">
-              Productos
-            </a>
-            <a href="/stock" class="border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700 inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium">
-              Stock
-            </a>
-            <a href="/cupones" class="border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700 inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium">
-              Cupones
-            </a>
-            <a href="/pagos" class="border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700 inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium">
-              Pagos
-            </a>
-            <a href="/clientes" class="border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700 inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium">
-              Clientes
-            </a>
-            <a href="/pedidos" class="border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700 inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium">
-              Pedidos
-            </a>
-            <a href="/envios" class="border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700 inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium">
-              Envíos
-            </a>
-            <a href="/devoluciones" class="border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700 inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium">
-              Devoluciones
-            </a>
+          );
+        })}
+      </nav>
+
+      <div class="absolute bottom-0 left-0 right-0 p-4 border-t" style="border-color: var(--border-primary);">
+        <div class="flex items-center space-x-3 px-4 py-3 rounded-lg" style="background-color: var(--bg-tertiary);">
+          <div class="w-8 h-8 rounded-full flex items-center justify-center" style="background-color: var(--accent-purple);">
+            <span class="text-white text-sm font-bold">BS</span>
+          </div>
+          <div class="flex-1">
+            <p class="text-sm font-medium" style="color: var(--text-primary);">Base de Datos 2</p>
+            <p class="text-xs" style="color: var(--text-secondary);">Universidad 2025</p>
           </div>
         </div>
       </div>
-    </div>
-  </nav>
+    </aside>
 
-  <main class="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8">
-    <slot />
-  </main>
+    <div class="flex-1 flex flex-col overflow-hidden">
 
-  <footer class="bg-white border-t border-gray-200 mt-12">
-    <div class="max-w-7xl mx-auto py-6 px-4 sm:px-6 lg:px-8">
-      <p class="text-center text-gray-500 text-sm">
-        © 2025 E-commerce BS2 - Proyecto Universidad
-      </p>
+      <header class="h-16 border-b flex items-center justify-between px-6"
+              style="background-color: var(--bg-secondary); border-color: var(--border-primary);">
+        <div class="flex items-center space-x-4">
+          <button id="sidebarToggleMobile" class="lg:hidden p-2 rounded-lg hover:bg-opacity-10"
+                  style="color: var(--text-primary); background-color: var(--bg-tertiary);">
+            <Icon name="bars-3" size={24} />
+          </button>
+          <h1 class="text-xl font-bold" style="color: var(--text-primary);">{title}</h1>
+        </div>
+
+        <div class="flex items-center space-x-4">
+          <div class="text-right hidden sm:block">
+            <p class="text-sm font-medium" style="color: var(--text-primary);">Sistema E-commerce</p>
+            <p class="text-xs" style="color: var(--text-secondary);">PostgreSQL + Astro</p>
+          </div>
+        </div>
+      </header>
+
+      <main class="flex-1 overflow-y-auto p-6" style="background-color: var(--bg-primary);">
+        <div class="max-w-7xl mx-auto">
+          <slot />
+        </div>
+      </main>
     </div>
-  </footer>
+  </div>
+
+  <div id="sidebarOverlay" class="fixed inset-0 bg-black bg-opacity-50 z-40 lg:hidden hidden"></div>
+
+  <style>
+    .nav-item {
+      color: var(--text-secondary);
+    }
+
+    .nav-item:hover {
+      background-color: var(--bg-tertiary);
+      color: var(--text-primary);
+    }
+
+    .nav-item-active {
+      background-color: var(--accent-blue);
+      color: white;
+    }
+
+    .nav-item-active:hover {
+      background-color: var(--accent-blue-hover);
+    }
+
+    @media (max-width: 1024px) {
+      #sidebar {
+        position: fixed;
+        top: 0;
+        left: 0;
+        bottom: 0;
+        z-index: 50;
+        transform: translateX(-100%);
+      }
+
+      #sidebar.active {
+        transform: translateX(0);
+      }
+    }
+  </style>
+
+  <script is:inline>
+    const sidebar = document.getElementById('sidebar');
+    const overlay = document.getElementById('sidebarOverlay');
+    const toggleBtn = document.getElementById('sidebarToggleMobile');
+    const closeBtn = document.getElementById('sidebarToggle');
+
+    function toggleSidebar() {
+      sidebar?.classList.toggle('active');
+      overlay?.classList.toggle('hidden');
+    }
+
+    toggleBtn?.addEventListener('click', toggleSidebar);
+    closeBtn?.addEventListener('click', toggleSidebar);
+    overlay?.addEventListener('click', toggleSidebar);
+
+    if (window.innerWidth < 1024) {
+      document.querySelectorAll('#sidebar a').forEach(link => {
+        link.addEventListener('click', () => {
+          sidebar?.classList.remove('active');
+          overlay?.classList.add('hidden');
+        });
+      });
+    }
+  </script>
 </body>
 </html>

@@ -4,7 +4,7 @@ import { query } from '../../../lib/db';
 export const GET: APIRoute = async () => {
   try {
     const result = await query(`
-      SELECT 
+      SELECT
         d.devolucion_id,
         d.detalle_id,
         d.motivo,
@@ -45,14 +45,13 @@ export const GET: APIRoute = async () => {
 export const POST: APIRoute = async ({ request }) => {
   try {
     const formData = await request.formData();
-    
+
     const detalle_id = parseInt(formData.get('detalle_id') as string);
     const cantidad_devuelta = parseInt(formData.get('cantidad_devuelta') as string);
     const motivo = formData.get('motivo') as string;
 
     console.log('Procesando devolución:', { detalle_id, cantidad_devuelta, motivo });
 
-    // Llamar al procedimiento almacenado sp_procesar_devolucion
     await query(
       'CALL sp_procesar_devolucion($1, $2, $3)',
       [detalle_id, cantidad_devuelta, motivo]
@@ -65,11 +64,10 @@ export const POST: APIRoute = async ({ request }) => {
 
   } catch (error: any) {
     console.error('Error al procesar devolución:', error);
-    
-    // Redirigir con mensaje de error
+
     return new Response(null, {
       status: 303,
-      headers: { 
+      headers: {
         Location: '/devoluciones?error=' + encodeURIComponent(error.message || 'Error al procesar devolución')
       }
     });

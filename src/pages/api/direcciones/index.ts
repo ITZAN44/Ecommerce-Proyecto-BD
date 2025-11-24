@@ -1,14 +1,11 @@
 import type { APIRoute } from 'astro';
 import { query } from '../../../lib/db';
 
-// Este endpoint maneja la creación y edición de direcciones
-// La consulta de direcciones por cliente está en /api/clientes/direcciones
 export const POST: APIRoute = async ({ request }) => {
   try {
     const formData = await request.formData();
     const method = formData.get('_method') as string;
 
-    // Actualizar dirección (PUT)
     if (method === 'PUT') {
       const direccion_id = parseInt(formData.get('direccion_id') as string);
       const direccion_linea_1 = formData.get('direccion_linea_1') as string;
@@ -17,7 +14,7 @@ export const POST: APIRoute = async ({ request }) => {
       const pais = formData.get('pais') as string;
 
       await query(
-        `UPDATE direcciones 
+        `UPDATE direcciones
          SET direccion_linea_1 = $1,
              ciudad = $2,
              codigo_postal = $3,
@@ -32,7 +29,6 @@ export const POST: APIRoute = async ({ request }) => {
       });
     }
 
-    // Crear nueva dirección (POST)
     const cliente_id = parseInt(formData.get('cliente_id') as string);
     const direccion_linea_1 = formData.get('direccion_linea_1') as string;
     const ciudad = formData.get('ciudad') as string;

@@ -1,0 +1,34 @@
+Consigna del Proyecto Base de Datos 2 
+
+TODA LA LOGICA INTEGRADA EN LA BASE DE DATOS ECOMMERS
+
+1. Tema del Proyecto: 
+ECOMMERS 
+2. Modelado de la Base de Datos: 
+o Diseñen un Diagrama En dad-Relación Extendido (EER) detallado que incluya 
+en dades, relaciones, cardinalidades y atributos principales. 
+3. Implementación en un Sistema de Ges ón de Bases de Datos (DBMS): 
+o U lizar PostgreSQL para la implementación de su base de datos. 
+o La Base de datos deberá tener al menos 7 tablas. 
+o Crear: 
+
+3.1 Las tablas con sus pos de datos correspondientes. 
+3.2 Índices para mejorar el rendimiento de las consultas. 
+3.3 Restricciones (CHECK, UNIQUE, NOT NULL, etc.). 
+4.4 Relaciones entre tablas mediante claves foráneas. 
+5.5 Triggers 
+
+4. Procedimientos Almacenados y Funciones: 
+o Implementar al menos seis (6) funciones y cinco (5) procedimientos almacenados que 
+automa cen procesos o cálculos relevantes para el sistema (por ejemplo, calcular el 
+total de ventas, procesar reservaciones o registrar la asistencia de un estudiante). 
+5. Interfaces de Usuario 
+o Se deberá desarrollar una interfaz gráfica para interactuar con la base de datos, la cual 
+puede implementarse en cualquier lenguaje de programación excepto VBA. 
+o La interfaz debe permi r realizar operaciones básicas de CRUD (Crear, Leer, Actualizar, 
+Eliminar) por lo menos en 3 tabla. 
+o La interfaz debe tener una navegación intui va. 
+6. Transacciones y Concurrencia: 
+o Incluir control de transacciones que aseguren la integridad de las operaciones crí cas 
+(por ejemplo, para registrar una venta o realizar una reservación). 
+o Documenten cómo el sistema maneja la concurrencia y la recuperación de errores. 

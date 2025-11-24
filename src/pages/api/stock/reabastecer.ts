@@ -8,20 +8,16 @@ export const POST: APIRoute = async ({ request }) => {
     const cantidad = parseInt(formData.get('cantidad') as string);
     const costo_unitario = formData.get('costo_unitario') as string;
 
-    // Validar datos
     if (!stock_id || !cantidad || cantidad <= 0) {
       throw new Error('Datos inválidos');
     }
 
-    // Llamar al stored procedure sp_reabastecer_stock
     if (costo_unitario && costo_unitario.trim() !== '') {
-      // Con nuevo costo unitario
       await query(
         'CALL sp_reabastecer_stock($1, $2, $3)',
         [stock_id, cantidad, parseFloat(costo_unitario)]
       );
     } else {
-      // Sin cambiar el precio (pasar NULL)
       await query(
         'CALL sp_reabastecer_stock($1, $2, NULL)',
         [stock_id, cantidad]

@@ -12,7 +12,6 @@ export const GET: APIRoute = async ({ url }) => {
       });
     }
 
-    // Llamar a la función fn_cliente_tiene_pedidos
     const result = await query(
       `SELECT fn_cliente_tiene_pedidos($1) as tiene_pedidos`,
       [parseInt(clienteId)]
@@ -23,8 +22,8 @@ export const GET: APIRoute = async ({ url }) => {
     return new Response(JSON.stringify({
       cliente_id: parseInt(clienteId),
       tiene_pedidos: tienePedidos,
-      mensaje: tienePedidos 
-        ? 'Este cliente tiene pedidos registrados' 
+      mensaje: tienePedidos
+        ? 'Este cliente tiene pedidos registrados'
         : 'Este cliente no tiene pedidos'
     }), {
       status: 200,

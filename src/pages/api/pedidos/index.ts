@@ -4,7 +4,7 @@ import { query } from '../../../lib/db';
 export const GET: APIRoute = async () => {
   try {
     const result = await query(`
-      SELECT 
+      SELECT
         p.pedido_id,
         p.cliente_id,
         p.direccion_envio_id,
@@ -47,7 +47,6 @@ export const POST: APIRoute = async ({ request }) => {
     const formData = await request.formData();
     const method = formData.get('_method') as string;
 
-    // CANCELAR PEDIDO (cambio de estado a 'cancelado')
     if (method === 'DELETE') {
       const pedido_id = parseInt(formData.get('pedido_id') as string);
       const motivo = formData.get('motivo') as string;
@@ -55,11 +54,10 @@ export const POST: APIRoute = async ({ request }) => {
 
       console.log('Procesando pedido:', { pedido_id, motivo, eliminar_fisico });
 
-      // Si se solicita eliminación física
       if (eliminar_fisico) {
         try {
           await query('CALL sp_eliminar_pedido($1)', [pedido_id]);
-          
+
           return new Response(null, {
             status: 303,
             headers: { Location: '/pedidos' }
@@ -67,14 +65,13 @@ export const POST: APIRoute = async ({ request }) => {
         } catch (deleteError: any) {
           return new Response(null, {
             status: 303,
-            headers: { 
+            headers: {
               Location: '/pedidos?error=' + encodeURIComponent(deleteError.message || 'Error al eliminar pedido')
             }
           });
         }
       }
 
-      // Si no, solo cancelar (cambio de estado)
       await query(
         'CALL sp_cancelar_pedido($1, $2)',
         [pedido_id, motivo]
@@ -86,7 +83,6 @@ export const POST: APIRoute = async ({ request }) => {
       });
     }
 
-    // APLICAR CUPÓN
     if (method === 'PATCH') {
       const pedido_id = parseInt(formData.get('pedido_id') as string);
       const codigo_cupon = formData.get('codigo_cupon') as string;
@@ -104,7 +100,6 @@ export const POST: APIRoute = async ({ request }) => {
       });
     }
 
-    // CREAR PEDIDO
     const cliente_id = parseInt(formData.get('cliente_id') as string);
     const direccion_envio_id = parseInt(formData.get('direccion_envio_id') as string);
     const cupon_id = formData.get('cupon_id') ? parseInt(formData.get('cupon_id') as string) : null;
@@ -112,7 +107,6 @@ export const POST: APIRoute = async ({ request }) => {
 
     console.log('Creando pedido:', { cliente_id, direccion_envio_id, cupon_id, items });
 
-    // Llamar al procedimiento almacenado sp_crear_pedido
     const result = await query(
       'CALL sp_crear_pedido($1, $2, $3, $4, NULL)',
       [cliente_id, direccion_envio_id, cupon_id, items]
@@ -125,11 +119,10 @@ export const POST: APIRoute = async ({ request }) => {
 
   } catch (error: any) {
     console.error('Error en operación de pedidos:', error);
-    
-    // Redirigir con mensaje de error
+
     return new Response(null, {
       status: 303,
-      headers: { 
+      headers: {
         Location: '/pedidos?error=' + encodeURIComponent(error.message || 'Error en la operación')
       }
     });

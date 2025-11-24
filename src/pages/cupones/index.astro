@@ -1,4 +1,5 @@
 ---
+import Icon from '../../components/Icon.astro';
 import Layout from '../../layouts/Layout.astro';
 import { query } from '../../lib/db';
 
@@ -7,7 +8,7 @@ let error = '';
 
 try {
   const result = await query(`
-    SELECT cupon_id, codigo_cupon, tipo_descuento, valor_descuento, 
+    SELECT cupon_id, codigo_cupon, tipo_descuento, valor_descuento,
            fecha_expiracion, usos_disponibles, estado, fecha_creacion
     FROM cupones
     ORDER BY cupon_id DESC
@@ -18,7 +19,6 @@ try {
   console.error(err);
 }
 
-// Stats calculations
 const hoy = new Date();
 const activos = cupones.filter(c => c.estado === 'activo').length;
 const inactivos = cupones.filter(c => c.estado === 'inactivo').length;
@@ -33,178 +33,171 @@ const expirados = cupones.filter(c => {
 ---
 
 <Layout title="Cupones de Descuento">
-  <div class="min-h-screen bg-gradient-to-br from-slate-50 via-amber-50 to-slate-50 py-8">
-    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-      
+  <div class="container">
+    <div class="content-wrapper">
+
       <!-- Header -->
       <div class="mb-8">
         <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <div>
-            <h1 class="text-4xl font-bold bg-gradient-to-r from-amber-600 to-orange-600 bg-clip-text text-transparent flex items-center gap-3">
-              <span class="text-4xl">🎟️</span> Cupones de Descuento
+            <h1 class="page-title">
+              <Icon name="ticket" size={40} /> Cupones de Descuento
             </h1>
-            <p class="mt-2 text-slate-600">Gestiona cupones, promociones y descuentos</p>
+            <p class="mt-2" style="color: var(--text-secondary);">Gestiona cupones, promociones y descuentos</p>
           </div>
           <button
             onclick="document.getElementById('modal-crear').classList.remove('hidden')"
-            class="inline-flex items-center px-6 py-3 bg-gradient-to-r from-amber-600 to-orange-600 hover:from-amber-700 hover:to-orange-700 text-white font-semibold rounded-xl shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-200"
+            class="btn-primary"
           >
-            <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
-            </svg>
+            <Icon name="plus" size={20} />
             Nuevo Cupón
           </button>
         </div>
       </div>
 
       {error && (
-        <div class="mb-6 bg-red-50 border-l-4 border-red-500 p-4 rounded-lg">
-          <div class="flex items-center">
-            <svg class="w-5 h-5 text-red-500 mr-2" fill="currentColor" viewBox="0 0 20 20">
-              <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd"/>
-            </svg>
-            <p class="text-red-700 font-medium">{error}</p>
+        <div class="mb-6 border-l-4 p-4 rounded-lg" style="background-color: rgba(220, 38, 38, 0.1); border-color: var(--accent-red);">
+          <div class="flex items-center gap-2">
+            <Icon name="x-circle" size={20} />
+            <p class="font-medium" style="color: var(--accent-red);">{error}</p>
           </div>
         </div>
       )}
 
       <!-- Stats Cards -->
       <div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
-        <div class="bg-gradient-to-br from-slate-700 to-slate-800 rounded-2xl p-6 text-white shadow-xl transform hover:scale-105 transition-all duration-200">
+        <div class="card">
           <div class="flex items-center justify-between">
             <div>
-              <p class="text-slate-300 text-sm font-medium">Total Cupones</p>
-              <p class="text-4xl font-bold mt-2">{cupones.length}</p>
+              <p class="text-sm font-medium" style="color: var(--text-secondary);">Total Cupones</p>
+              <p class="text-4xl font-bold mt-2" style="color: var(--text-primary);">{cupones.length}</p>
             </div>
-            <div class="bg-slate-900/50 p-4 rounded-xl backdrop-blur-sm">
-              <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 5v2m0 4v2m0 4v2M5 5a2 2 0 00-2 2v3a2 2 0 110 4v3a2 2 0 002 2h14a2 2 0 002-2v-3a2 2 0 110-4V7a2 2 0 00-2-2H5z"/>
-              </svg>
+            <div style="color: var(--text-secondary);">
+              <Icon name="ticket" size={32} />
             </div>
           </div>
         </div>
 
-        <div class="bg-gradient-to-br from-green-600 to-green-700 rounded-2xl p-6 text-white shadow-xl transform hover:scale-105 transition-all duration-200">
+        <div class="card">
           <div class="flex items-center justify-between">
             <div>
-              <p class="text-green-200 text-sm font-medium">Activos</p>
-              <p class="text-4xl font-bold mt-2">{activos}</p>
+              <p class="text-sm font-medium" style="color: var(--text-secondary);">Activos</p>
+              <p class="text-4xl font-bold mt-2" style="color: var(--text-primary);">{activos}</p>
             </div>
-            <div class="bg-green-900/50 p-4 rounded-xl backdrop-blur-sm">
-              <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
-              </svg>
+            <div style="color: var(--accent-green);">
+              <Icon name="check-circle" size={32} />
             </div>
           </div>
         </div>
 
-        <div class="bg-gradient-to-br from-slate-600 to-slate-700 rounded-2xl p-6 text-white shadow-xl transform hover:scale-105 transition-all duration-200">
+        <div class="card">
           <div class="flex items-center justify-between">
             <div>
-              <p class="text-slate-300 text-sm font-medium">Inactivos</p>
-              <p class="text-4xl font-bold mt-2">{inactivos}</p>
+              <p class="text-sm font-medium" style="color: var(--text-secondary);">Inactivos</p>
+              <p class="text-4xl font-bold mt-2" style="color: var(--text-primary);">{inactivos}</p>
             </div>
-            <div class="bg-slate-900/50 p-4 rounded-xl backdrop-blur-sm">
-              <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636"/>
-              </svg>
+            <div style="color: var(--text-tertiary);">
+              <Icon name="minus-circle" size={32} />
             </div>
           </div>
         </div>
 
-        <div class="bg-gradient-to-br from-red-600 to-red-700 rounded-2xl p-6 text-white shadow-xl transform hover:scale-105 transition-all duration-200">
+        <div class="card">
           <div class="flex items-center justify-between">
             <div>
-              <p class="text-red-200 text-sm font-medium">Expirados</p>
-              <p class="text-4xl font-bold mt-2">{expirados}</p>
+              <p class="text-sm font-medium" style="color: var(--text-secondary);">Expirados</p>
+              <p class="text-4xl font-bold mt-2" style="color: var(--text-primary);">{expirados}</p>
             </div>
-            <div class="bg-red-900/50 p-4 rounded-xl backdrop-blur-sm">
-              <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
-              </svg>
+            <div style="color: var(--accent-red);">
+              <Icon name="clock" size={32} />
             </div>
           </div>
         </div>
       </div>
 
       <!-- Tabla de Cupones -->
-      <div class="bg-white rounded-2xl shadow-xl overflow-hidden border border-slate-200">
+      <div class="card overflow-hidden">
         <div class="overflow-x-auto">
-          <table class="min-w-full divide-y divide-slate-200">
-            <thead class="bg-gradient-to-r from-slate-50 to-slate-100">
+          <table class="min-w-full">
+            <thead class="border-b" style="background-color: var(--bg-tertiary); border-color: var(--border-color);">
               <tr>
-                <th class="px-6 py-4 text-left text-xs font-bold text-slate-700 uppercase tracking-wider">Código</th>
-                <th class="px-6 py-4 text-left text-xs font-bold text-slate-700 uppercase tracking-wider">Tipo</th>
-                <th class="px-6 py-4 text-left text-xs font-bold text-slate-700 uppercase tracking-wider">Descuento</th>
-                <th class="px-6 py-4 text-left text-xs font-bold text-slate-700 uppercase tracking-wider">Expiración</th>
-                <th class="px-6 py-4 text-left text-xs font-bold text-slate-700 uppercase tracking-wider">Usos Disponibles</th>
-                <th class="px-6 py-4 text-left text-xs font-bold text-slate-700 uppercase tracking-wider">Estado</th>
-                <th class="px-6 py-4 text-left text-xs font-bold text-slate-700 uppercase tracking-wider">Acciones</th>
+                <th class="px-6 py-4 text-left text-xs font-bold uppercase tracking-wider" style="color: var(--text-primary);">Código</th>
+                <th class="px-6 py-4 text-left text-xs font-bold uppercase tracking-wider" style="color: var(--text-primary);">Tipo</th>
+                <th class="px-6 py-4 text-left text-xs font-bold uppercase tracking-wider" style="color: var(--text-primary);">Descuento</th>
+                <th class="px-6 py-4 text-left text-xs font-bold uppercase tracking-wider" style="color: var(--text-primary);">Expiración</th>
+                <th class="px-6 py-4 text-left text-xs font-bold uppercase tracking-wider" style="color: var(--text-primary);">Usos Disponibles</th>
+                <th class="px-6 py-4 text-left text-xs font-bold uppercase tracking-wider" style="color: var(--text-primary);">Estado</th>
+                <th class="px-6 py-4 text-left text-xs font-bold uppercase tracking-wider" style="color: var(--text-primary);">Acciones</th>
               </tr>
             </thead>
-            <tbody class="bg-white divide-y divide-slate-200">
+            <tbody class="divide-y" style="border-color: var(--border-color);">
               {cupones.map((cupon) => {
                 const hoy = new Date();
                 const fechaExp = cupon.fecha_expiracion ? new Date(cupon.fecha_expiracion) : null;
                 const estaExpirado = fechaExp && fechaExp < hoy;
-                
+
                 return (
-                  <tr class="hover:bg-slate-50 transition-colors duration-150">
+                  <tr class="transition-colors duration-150" style="background-color: var(--bg-secondary);" onmouseover="this.style.backgroundColor='var(--bg-tertiary)'" onmouseout="this.style.backgroundColor='var(--bg-secondary)'">
                     <td class="px-6 py-4 whitespace-nowrap">
                       <div class="flex items-center gap-2">
-                        <span class="text-2xl">🎟️</span>
-                        <span class="font-mono text-sm font-bold text-amber-600">{cupon.codigo_cupon}</span>
+                        <Icon name="ticket" size={20} />
+                        <span class="font-mono text-sm font-bold" style="color: var(--accent-yellow);">{cupon.codigo_cupon}</span>
                       </div>
                     </td>
                     <td class="px-6 py-4 whitespace-nowrap">
-                      <span class={`inline-flex px-3 py-1 text-xs font-bold rounded-full ${
-                        cupon.tipo_descuento === 'porcentaje' 
-                          ? 'bg-blue-100 text-blue-800' 
-                          : 'bg-purple-100 text-purple-800'
-                      }`}>
-                        {cupon.tipo_descuento === 'porcentaje' ? '📊 Porcentaje' : '💵 Fijo'}
+                      <span class={`inline-flex items-center gap-1.5 px-3 py-1 text-xs font-bold rounded-full ${
+                        cupon.tipo_descuento === 'porcentaje'
+                          ? 'bg-blue-500/10'
+                          : 'bg-purple-500/10'
+                      }`} style={`color: ${cupon.tipo_descuento === 'porcentaje' ? 'var(--accent-blue)' : 'var(--accent-purple)'}`}>
+                        <Icon name={cupon.tipo_descuento === 'porcentaje' ? 'chart-bar' : 'currency-dollar'} size={14} />
+                        {cupon.tipo_descuento === 'porcentaje' ? 'Porcentaje' : 'Fijo'}
                       </span>
                     </td>
                     <td class="px-6 py-4 whitespace-nowrap">
-                      <span class="text-lg font-bold text-green-600">
-                        {cupon.tipo_descuento === 'porcentaje' 
-                          ? `${parseFloat(cupon.valor_descuento).toFixed(0)}%` 
+                      <span class="text-lg font-bold" style="color: var(--accent-green);">
+                        {cupon.tipo_descuento === 'porcentaje'
+                          ? `${parseFloat(cupon.valor_descuento).toFixed(0)}%`
                           : `$${parseFloat(cupon.valor_descuento).toFixed(2)}`}
                       </span>
                     </td>
                     <td class="px-6 py-4 whitespace-nowrap">
                       {cupon.fecha_expiracion ? (
                         <div class="text-sm">
-                          <div class={`font-semibold ${estaExpirado ? 'text-red-600' : 'text-slate-700'}`}>
+                          <div class={`font-semibold`} style={`color: ${estaExpirado ? 'var(--accent-red)' : 'var(--text-primary)'}`}>
                             {new Date(cupon.fecha_expiracion).toLocaleDateString('es-ES')}
                           </div>
                           {estaExpirado && (
-                            <span class="text-xs text-red-500 font-medium">⚠️ Expirado</span>
+                            <span class="text-xs font-medium flex items-center gap-1 mt-1" style="color: var(--accent-red);">
+                              <Icon name="exclamation-triangle" size={12} />
+                              Expirado
+                            </span>
                           )}
                         </div>
                       ) : (
-                        <span class="text-sm text-slate-500 italic">Sin expiración</span>
+                        <span class="text-sm italic" style="color: var(--text-secondary);">Sin expiración</span>
                       )}
                     </td>
                     <td class="px-6 py-4 whitespace-nowrap">
                       {cupon.usos_disponibles !== null ? (
                         <span class={`inline-flex items-center px-3 py-1 rounded-full text-sm font-bold ${
-                          cupon.usos_disponibles > 10 ? 'bg-green-100 text-green-800' :
-                          cupon.usos_disponibles > 0 ? 'bg-yellow-100 text-yellow-800' :
-                          'bg-red-100 text-red-800'
-                        }`}>
+                          cupon.usos_disponibles > 10 ? 'bg-green-500/10' :
+                          cupon.usos_disponibles > 0 ? 'bg-yellow-500/10' :
+                          'bg-red-500/10'
+                        }`} style={`color: ${cupon.usos_disponibles > 10 ? 'var(--accent-green)' : cupon.usos_disponibles > 0 ? 'var(--accent-yellow)' : 'var(--accent-red)'}`}>
                           {cupon.usos_disponibles}
                         </span>
                       ) : (
-                        <span class="text-sm text-slate-500 italic">Ilimitado</span>
+                        <span class="text-sm italic" style="color: var(--text-secondary);">Ilimitado</span>
                       )}
                     </td>
                     <td class="px-6 py-4 whitespace-nowrap">
-                      <span class={`inline-flex px-3 py-1 text-xs font-bold rounded-full ${
-                        cupon.estado === 'activo' ? 'bg-green-100 text-green-800' :
-                        cupon.estado === 'expirado' ? 'bg-red-100 text-red-800' :
-                        'bg-slate-100 text-slate-800'
-                      }`}>
+                      <span class={`inline-flex items-center gap-1.5 px-3 py-1 text-xs font-bold rounded-full ${
+                        cupon.estado === 'activo' ? 'bg-green-500/10' :
+                        cupon.estado === 'expirado' ? 'bg-red-500/10' :
+                        'bg-gray-500/10'
+                      }`} style={`color: ${cupon.estado === 'activo' ? 'var(--accent-green)' : cupon.estado === 'expirado' ? 'var(--accent-red)' : 'var(--text-tertiary)'}`}>
+                        <Icon name={cupon.estado === 'activo' ? 'check-circle' : cupon.estado === 'expirado' ? 'clock' : 'minus-circle'} size={14} />
                         {cupon.estado}
                       </span>
                     </td>
@@ -212,38 +205,33 @@ const expirados = cupones.filter(c => {
                       <div class="flex gap-2">
                         <button
                           onclick={`validarCupon(${JSON.stringify(cupon.codigo_cupon)})`}
-                          class="text-blue-600 hover:text-blue-800 font-semibold hover:bg-blue-50 p-2 rounded-lg transition-colors"
+                          class="btn-action p-2 rounded-lg transition-all duration-200 hover:scale-110"
+                          style="color: var(--accent-blue);"
+                          onmouseover="this.style.backgroundColor='var(--bg-tertiary)'"
+                          onmouseout="this.style.backgroundColor=''"
                           title="Validar Cupón"
                         >
-                          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
-                          </svg>
+                          <Icon name="shield-check" size={18} />
                         </button>
                         <button
                           onclick={`editar(${cupon.cupon_id}, ${JSON.stringify(cupon.codigo_cupon)}, ${JSON.stringify(cupon.tipo_descuento)}, ${cupon.valor_descuento}, ${JSON.stringify(cupon.fecha_expiracion)}, ${JSON.stringify(cupon.usos_disponibles)})`}
-                          class="text-amber-600 hover:text-amber-800 font-semibold hover:bg-amber-50 p-2 rounded-lg transition-colors"
+                          class="btn-action p-2 rounded-lg transition-all duration-200 hover:scale-110"
+                          style="color: var(--accent-yellow);"
+                          onmouseover="this.style.backgroundColor='var(--bg-tertiary)'"
+                          onmouseout="this.style.backgroundColor=''"
                           title="Editar"
                         >
-                          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
-                          </svg>
+                          <Icon name="pencil" size={18} />
                         </button>
                         <button
                           onclick={`cambiarEstado(${cupon.cupon_id}, ${JSON.stringify(cupon.estado === 'activo' ? 'inactivo' : 'activo')})`}
-                          class={`font-semibold p-2 rounded-lg transition-colors ${
-                            cupon.estado === 'activo' 
-                              ? 'text-red-600 hover:text-red-800 hover:bg-red-50' 
-                              : 'text-green-600 hover:text-green-800 hover:bg-green-50'
-                          }`}
+                          class="btn-action p-2 rounded-lg transition-all duration-200 hover:scale-110"
+                          style={`color: ${cupon.estado === 'activo' ? 'var(--accent-red)' : 'var(--accent-green)'}`}
+                          onmouseover="this.style.backgroundColor='var(--bg-tertiary)'"
+                          onmouseout="this.style.backgroundColor=''"
                           title={cupon.estado === 'activo' ? 'Desactivar' : 'Activar'}
                         >
-                          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d={
-                              cupon.estado === 'activo' 
-                                ? "M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636"
-                                : "M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
-                            }/>
-                          </svg>
+                          <Icon name={cupon.estado === 'activo' ? 'x-circle' : 'check-circle'} size={18} />
                         </button>
                       </div>
                     </td>
@@ -258,103 +246,100 @@ const expirados = cupones.filter(c => {
   </div>
 
   <!-- Modal Crear Cupón -->
-  <div id="modal-crear" class="hidden fixed inset-0 bg-black/60 backdrop-blur-sm overflow-y-auto h-full w-full z-50 flex items-center justify-center p-4">
-    <div class="relative bg-white rounded-2xl shadow-2xl max-w-lg w-full animate-slideIn">
-      <div class="bg-gradient-to-r from-amber-600 to-orange-600 rounded-t-2xl px-6 py-5">
-        <h3 class="text-2xl font-bold text-white flex items-center gap-2">
-          <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
-          </svg>
-          Crear Nuevo Cupón
-        </h3>
-      </div>
-      
-      <form action="/api/cupones" method="POST" class="p-6">
-        <div class="space-y-5">
-          <div>
-            <label class="block text-sm font-semibold text-slate-700 mb-2">
-              Código del Cupón <span class="text-red-500">*</span>
-            </label>
-            <input
-              type="text"
-              name="codigo_cupon"
-              required
-              placeholder="Ej: VERANO2025"
-              class="w-full px-4 py-3 border-2 border-slate-300 rounded-xl focus:ring-2 focus:ring-amber-500 focus:border-transparent transition-all duration-200 outline-none font-mono uppercase"
-            />
-          </div>
+  <div id="modal-crear" class="hidden fixed inset-0 z-50 overflow-y-auto">
+    <div class="fixed inset-0 bg-black bg-opacity-70 transition-opacity" onclick="document.getElementById('modal-crear').classList.add('hidden')"></div>
+    <div class="flex min-h-full items-center justify-center p-4">
+      <div class="relative w-full max-w-lg transform overflow-hidden rounded-2xl p-6 shadow-2xl transition-all" style="background-color: var(--bg-secondary);">
+        <div class="border-b pb-4 mb-6" style="border-color: var(--border-color);">
+          <h3 class="text-2xl font-bold flex items-center gap-3" style="color: var(--text-primary);">
+            <Icon name="ticket" size={28} />
+            Crear Nuevo Cupón
+          </h3>
+        </div>
 
-          <div>
-            <label class="block text-sm font-semibold text-slate-700 mb-2">
-              Tipo de Descuento <span class="text-red-500">*</span>
-            </label>
-            <select
-              name="tipo_descuento"
-              id="tipo-crear"
-              required
-              onchange="toggleTipoDescuento('crear')"
-              class="w-full px-4 py-3 border-2 border-slate-300 rounded-xl focus:ring-2 focus:ring-amber-500 focus:border-transparent transition-all duration-200 outline-none"
-            >
-              <option value="porcentaje">📊 Porcentaje (%)</option>
-              <option value="fijo">💵 Monto Fijo ($)</option>
-            </select>
-          </div>
+        <form action="/api/cupones" method="POST">
+          <div class="space-y-5">
+            <div>
+              <label class="block text-sm font-semibold mb-2" style="color: var(--text-secondary);">
+                Código del Cupón <span style="color: var(--accent-red);">*</span>
+              </label>
+              <input
+                type="text"
+                name="codigo_cupon"
+                required
+                placeholder="Ej: VERANO2025"
+                class="input font-mono uppercase"
+              />
+            </div>
 
-          <div>
-            <label class="block text-sm font-semibold text-slate-700 mb-2">
-              Valor del Descuento <span class="text-red-500">*</span>
-            </label>
-            <div class="relative">
-              <span id="simbolo-crear" class="absolute left-4 top-3 text-slate-500 font-semibold">%</span>
+            <div>
+              <label class="block text-sm font-semibold mb-2" style="color: var(--text-secondary);">
+                Tipo de Descuento <span style="color: var(--accent-red);">*</span>
+              </label>
+              <select
+                name="tipo_descuento"
+                id="tipo-crear"
+                required
+                onchange="toggleTipoDescuento('crear')"
+                class="input"
+              >
+                <option value="porcentaje">Porcentaje (%)</option>
+                <option value="fijo">Monto Fijo ($)</option>
+              </select>
+            </div>
+
+            <div>
+              <label class="block text-sm font-semibold mb-2" style="color: var(--text-secondary);">
+                Valor del Descuento <span style="color: var(--accent-red);">*</span>
+              </label>
+              <div class="relative">
+                <span id="simbolo-crear" class="absolute left-4 top-3 font-semibold" style="color: var(--text-tertiary);">%</span>
+                <input
+                  type="number"
+                  name="valor_descuento"
+                  id="valor-crear"
+                  required
+                  min="0"
+                  step="0.01"
+                  class="input pl-8"
+                />
+              </div>
+            </div>
+
+            <div>
+              <label class="block text-sm font-semibold mb-2" style="color: var(--text-secondary);">
+                Fecha de Expiración (Opcional)
+              </label>
+              <input
+                type="date"
+                name="fecha_expiracion"
+                class="input"
+              />
+              <p class="mt-1 text-xs" style="color: var(--text-tertiary);">Dejar vacío para cupón sin expiración</p>
+            </div>
+
+            <div>
+              <label class="block text-sm font-semibold mb-2" style="color: var(--text-secondary);">
+                Usos Disponibles (Opcional)
+              </label>
               <input
                 type="number"
-                name="valor_descuento"
-                id="valor-crear"
-                required
+                name="usos_disponibles"
                 min="0"
-                step="0.01"
-                class="w-full pl-8 pr-4 py-3 border-2 border-slate-300 rounded-xl focus:ring-2 focus:ring-amber-500 focus:border-transparent transition-all duration-200 outline-none"
+                placeholder="Dejar vacío para usos ilimitados"
+                class="input"
               />
             </div>
           </div>
 
-          <div>
-            <label class="block text-sm font-semibold text-slate-700 mb-2">
-              Fecha de Expiración (Opcional)
-            </label>
-            <input
-              type="date"
-              name="fecha_expiracion"
-              class="w-full px-4 py-3 border-2 border-slate-300 rounded-xl focus:ring-2 focus:ring-amber-500 focus:border-transparent transition-all duration-200 outline-none"
-            />
-            <p class="mt-1 text-xs text-slate-500">Dejar vacío para cupón sin expiración</p>
-          </div>
-
-          <div>
-            <label class="block text-sm font-semibold text-slate-700 mb-2">
-              Usos Disponibles (Opcional)
-            </label>
-            <input
-              type="number"
-              name="usos_disponibles"
-              min="0"
-              placeholder="Dejar vacío para usos ilimitados"
-              class="w-full px-4 py-3 border-2 border-slate-300 rounded-xl focus:ring-2 focus:ring-amber-500 focus:border-transparent transition-all duration-200 outline-none"
-            />
-          </div>
-        </div>
-        
-        <div class="flex gap-3 mt-6">
-          <button
-            type="submit"
-            class="flex-1 bg-gradient-to-r from-amber-600 to-orange-600 hover:from-amber-700 hover:to-orange-700 text-white font-semibold py-3 px-4 rounded-xl shadow-lg hover:shadow-xl transition-all duration-200 transform hover:scale-105"
-          >
-            Crear Cupón
-          </button>
-          <button
-            type="button"
-            onclick="document.getElementById('modal-crear').classList.add('hidden')"
-            class="px-6 bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold py-3 rounded-xl transition-all duration-200"
+          <div class="flex gap-3 mt-6">
+            <button type="submit" class="flex-1 btn-primary">
+              Crear Cupón
+            </button>
+            <button
+              type="button"
+              onclick="document.getElementById('modal-crear').classList.add('hidden')"
+              class="btn-secondary"
           >
             Cancelar
           </button>
@@ -364,106 +349,103 @@ const expirados = cupones.filter(c => {
   </div>
 
   <!-- Modal Editar Cupón -->
-  <div id="modal-editar" class="hidden fixed inset-0 bg-black/60 backdrop-blur-sm overflow-y-auto h-full w-full z-50 flex items-center justify-center p-4">
-    <div class="relative bg-white rounded-2xl shadow-2xl max-w-lg w-full animate-slideIn">
-      <div class="bg-gradient-to-r from-blue-600 to-blue-700 rounded-t-2xl px-6 py-5">
-        <h3 class="text-2xl font-bold text-white flex items-center gap-2">
-          <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
-          </svg>
-          Editar Cupón
-        </h3>
-      </div>
-      
-      <form action="/api/cupones" method="POST" class="p-6">
-        <input type="hidden" name="_method" value="PUT" />
-        <input type="hidden" name="cupon_id" id="edit-cupon-id" />
-        
-        <div class="space-y-5">
-          <div>
-            <label class="block text-sm font-semibold text-slate-700 mb-2">
-              Código del Cupón <span class="text-red-500">*</span>
-            </label>
-            <input
-              type="text"
-              name="codigo_cupon"
-              id="edit-codigo"
-              required
-              class="w-full px-4 py-3 border-2 border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 outline-none font-mono uppercase"
-            />
-          </div>
+  <div id="modal-editar" class="hidden fixed inset-0 z-50 overflow-y-auto">
+    <div class="fixed inset-0 bg-black bg-opacity-70 transition-opacity" onclick="document.getElementById('modal-editar').classList.add('hidden')"></div>
+    <div class="flex min-h-full items-center justify-center p-4">
+      <div class="relative w-full max-w-lg transform overflow-hidden rounded-2xl p-6 shadow-2xl transition-all" style="background-color: var(--bg-secondary);">
+        <div class="border-b pb-4 mb-6" style="border-color: var(--border-color);">
+          <h3 class="text-2xl font-bold flex items-center gap-3" style="color: var(--text-primary);">
+            <Icon name="pencil" size={28} />
+            Editar Cupón
+          </h3>
+        </div>
 
-          <div>
-            <label class="block text-sm font-semibold text-slate-700 mb-2">
-              Tipo de Descuento <span class="text-red-500">*</span>
-            </label>
-            <select
-              name="tipo_descuento"
-              id="tipo-edit"
-              required
-              onchange="toggleTipoDescuento('edit')"
-              class="w-full px-4 py-3 border-2 border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 outline-none"
-            >
-              <option value="porcentaje">📊 Porcentaje (%)</option>
-              <option value="fijo">💵 Monto Fijo ($)</option>
-            </select>
-          </div>
+        <form action="/api/cupones" method="POST">
+          <input type="hidden" name="_method" value="PUT" />
+          <input type="hidden" name="cupon_id" id="edit-cupon-id" />
 
-          <div>
-            <label class="block text-sm font-semibold text-slate-700 mb-2">
-              Valor del Descuento <span class="text-red-500">*</span>
-            </label>
-            <div class="relative">
-              <span id="simbolo-edit" class="absolute left-4 top-3 text-slate-500 font-semibold">%</span>
+          <div class="space-y-5">
+            <div>
+              <label class="block text-sm font-semibold mb-2" style="color: var(--text-secondary);">
+                Código del Cupón <span style="color: var(--accent-red);">*</span>
+              </label>
+              <input
+                type="text"
+                name="codigo_cupon"
+                id="edit-codigo"
+                required
+                class="input font-mono uppercase"
+              />
+            </div>
+
+            <div>
+              <label class="block text-sm font-semibold mb-2" style="color: var(--text-secondary);">
+                Tipo de Descuento <span style="color: var(--accent-red);">*</span>
+              </label>
+              <select
+                name="tipo_descuento"
+                id="tipo-edit"
+                required
+                onchange="toggleTipoDescuento('edit')"
+                class="input"
+              >
+                <option value="porcentaje">Porcentaje (%)</option>
+                <option value="fijo">Monto Fijo ($)</option>
+              </select>
+            </div>
+
+            <div>
+              <label class="block text-sm font-semibold mb-2" style="color: var(--text-secondary);">
+                Valor del Descuento <span style="color: var(--accent-red);">*</span>
+              </label>
+              <div class="relative">
+                <span id="simbolo-edit" class="absolute left-4 top-3 font-semibold" style="color: var(--text-tertiary);">%</span>
+                <input
+                  type="number"
+                  name="valor_descuento"
+                  id="edit-valor"
+                  required
+                  min="0"
+                  step="0.01"
+                  class="input pl-8"
+                />
+              </div>
+            </div>
+
+            <div>
+              <label class="block text-sm font-semibold mb-2" style="color: var(--text-secondary);">
+                Fecha de Expiración (Opcional)
+              </label>
+              <input
+                type="date"
+                name="fecha_expiracion"
+                id="edit-fecha"
+                class="input"
+              />
+            </div>
+
+            <div>
+              <label class="block text-sm font-semibold mb-2" style="color: var(--text-secondary);">
+                Usos Disponibles (Opcional)
+              </label>
               <input
                 type="number"
-                name="valor_descuento"
-                id="edit-valor"
-                required
+                name="usos_disponibles"
+                id="edit-usos"
                 min="0"
-                step="0.01"
-                class="w-full pl-8 pr-4 py-3 border-2 border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 outline-none"
+                class="input"
               />
             </div>
           </div>
 
-          <div>
-            <label class="block text-sm font-semibold text-slate-700 mb-2">
-              Fecha de Expiración (Opcional)
-            </label>
-            <input
-              type="date"
-              name="fecha_expiracion"
-              id="edit-fecha"
-              class="w-full px-4 py-3 border-2 border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 outline-none"
-            />
-          </div>
-
-          <div>
-            <label class="block text-sm font-semibold text-slate-700 mb-2">
-              Usos Disponibles (Opcional)
-            </label>
-            <input
-              type="number"
-              name="usos_disponibles"
-              id="edit-usos"
-              min="0"
-              class="w-full px-4 py-3 border-2 border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 outline-none"
-            />
-          </div>
-        </div>
-        
-        <div class="flex gap-3 mt-6">
-          <button
-            type="submit"
-            class="flex-1 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white font-semibold py-3 px-4 rounded-xl shadow-lg hover:shadow-xl transition-all duration-200 transform hover:scale-105"
-          >
-            Guardar Cambios
-          </button>
-          <button
-            type="button"
-            onclick="document.getElementById('modal-editar').classList.add('hidden')"
-            class="px-6 bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold py-3 rounded-xl transition-all duration-200"
+          <div class="flex gap-3 mt-6">
+            <button type="submit" class="flex-1 btn-primary">
+              Guardar Cambios
+            </button>
+            <button
+              type="button"
+              onclick="document.getElementById('modal-editar').classList.add('hidden')"
+              class="btn-secondary"
           >
             Cancelar
           </button>
@@ -476,7 +458,7 @@ const expirados = cupones.filter(c => {
     function toggleTipoDescuento(modal) {
       const select = document.getElementById(`tipo-${modal}`);
       const simbolo = document.getElementById(`simbolo-${modal}`);
-      
+
       if (select.value === 'porcentaje') {
         simbolo.textContent = '%';
       } else {
@@ -504,7 +486,7 @@ const expirados = cupones.filter(c => {
       try {
         const response = await fetch(`/api/cupones/validar?codigo=${encodeURIComponent(codigo)}`);
         const data = await response.json();
-        
+
         if (data.valido) {
           alert(`✅ Cupón "${codigo}" es VÁLIDO\n\n${data.mensaje}`);
         } else {
@@ -518,18 +500,18 @@ const expirados = cupones.filter(c => {
 
     async function cambiarEstado(cupon_id, nuevoEstado) {
       if (!confirm(`¿Estás seguro de ${nuevoEstado === 'activo' ? 'activar' : 'desactivar'} este cupón?`)) return;
-      
+
       try {
         const formData = new FormData();
         formData.append('_method', 'PATCH');
         formData.append('cupon_id', cupon_id);
         formData.append('estado', nuevoEstado);
-        
+
         const response = await fetch('/api/cupones', {
           method: 'POST',
           body: formData
         });
-        
+
         if (response.ok) {
           location.reload();
         } else {
@@ -541,7 +523,6 @@ const expirados = cupones.filter(c => {
       }
     }
 
-    // Cerrar modales con ESC
     document.addEventListener('keydown', (e) => {
       if (e.key === 'Escape') {
         document.getElementById('modal-crear').classList.add('hidden');
@@ -549,7 +530,6 @@ const expirados = cupones.filter(c => {
       }
     });
 
-    // Cerrar modales al hacer clic fuera
     ['modal-crear', 'modal-editar'].forEach(modalId => {
       const modal = document.getElementById(modalId);
       if (modal) {

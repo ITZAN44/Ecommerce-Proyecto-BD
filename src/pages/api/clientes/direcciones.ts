@@ -13,7 +13,7 @@ export const GET: APIRoute = async ({ url }) => {
     }
 
     const result = await query(
-      `SELECT 
+      `SELECT
         direccion_id,
         cliente_id,
         direccion_linea_1,

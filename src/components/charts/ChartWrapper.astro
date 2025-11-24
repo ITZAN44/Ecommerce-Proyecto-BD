@@ -1,0 +1,27 @@
+---
+export interface Props {
+  chartId: string;
+  title?: string;
+  height?: number;
+}
+
+const { chartId, title, height = 300 } = Astro.props;
+---
+
+<div class="chart-container">
+  {title && (
+    <h4 class="chart-title" style="color: var(--text-primary); font-size: 0.875rem; font-weight: 600; margin-bottom: 1rem;">
+      {title}
+    </h4>
+  )}
+  <div style={`position: relative; height: ${height}px;`}>
+    <canvas id={chartId}></canvas>
+  </div>
+  <slot />
+</div>
+
+<style>
+  .chart-container {
+    width: 100%;
+  }
+</style>

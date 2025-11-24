@@ -4,7 +4,7 @@ import { query } from '../../../lib/db';
 export const GET: APIRoute = async () => {
   try {
     const result = await query(`
-      SELECT 
+      SELECT
         pa.pago_id,
         pa.pedido_id,
         pa.fecha_pago,
@@ -42,7 +42,6 @@ export const POST: APIRoute = async ({ request }) => {
     const formData = await request.formData();
     const method = formData.get('_method') as string;
 
-    // Eliminar pago físicamente (DELETE)
     if (method === 'DELETE') {
       const pago_id = parseInt(formData.get('pago_id') as string);
 
@@ -50,7 +49,7 @@ export const POST: APIRoute = async ({ request }) => {
 
       try {
         await query('CALL sp_eliminar_pago($1)', [pago_id]);
-        
+
         return new Response(null, {
           status: 303,
           headers: { Location: '/pagos' }
@@ -58,14 +57,13 @@ export const POST: APIRoute = async ({ request }) => {
       } catch (deleteError: any) {
         return new Response(null, {
           status: 303,
-          headers: { 
+          headers: {
             Location: '/pagos?error=' + encodeURIComponent(deleteError.message || 'Error al eliminar pago')
           }
         });
       }
     }
 
-    // Procesar pago usando procedimiento almacenado (POST)
     const pedido_id = parseInt(formData.get('pedido_id') as string);
     const monto = parseFloat(formData.get('monto') as string);
     const metodo_pago = formData.get('metodo_pago') as string;
@@ -73,7 +71,6 @@ export const POST: APIRoute = async ({ request }) => {
 
     console.log('Procesando pago:', { pedido_id, monto, metodo_pago, id_transaccion });
 
-    // Llamar al procedimiento almacenado sp_procesar_pago
     await query(
       'CALL sp_procesar_pago($1, $2, $3, $4)',
       [pedido_id, monto, metodo_pago, id_transaccion]
@@ -86,11 +83,10 @@ export const POST: APIRoute = async ({ request }) => {
 
   } catch (error: any) {
     console.error('Error al procesar pago:', error);
-    
-    // Redirigir con mensaje de error
+
     return new Response(null, {
       status: 303,
-      headers: { 
+      headers: {
         Location: '/pagos?error=' + encodeURIComponent(error.message || 'Error al procesar pago')
       }
     });

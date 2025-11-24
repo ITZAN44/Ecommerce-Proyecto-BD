@@ -12,7 +12,6 @@ export const GET: APIRoute = async ({ url }) => {
       });
     }
 
-    // Llamar a la función fn_calcular_puntos_fidelidad
     const result = await query(
       `SELECT fn_calcular_puntos_fidelidad($1) as puntos`,
       [parseInt(clienteId)]
@@ -20,7 +19,6 @@ export const GET: APIRoute = async ({ url }) => {
 
     const puntos = result.rows[0]?.puntos || 0;
 
-    // Obtener información del cliente
     const clienteResult = await query(
       `SELECT nombre, apellido FROM clientes WHERE cliente_id = $1`,
       [parseInt(clienteId)]

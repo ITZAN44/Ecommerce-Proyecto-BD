@@ -1,11 +1,10 @@
 import type { APIRoute } from 'astro';
 import { query } from '../../../lib/db';
 
-// Endpoint para validar si un pedido permite devoluciones
 export const GET: APIRoute = async ({ url }) => {
   try {
     const pedidoId = url.searchParams.get('pedido_id');
-    
+
     if (!pedidoId) {
       return new Response(JSON.stringify({ error: 'pedido_id requerido' }), {
         status: 400,

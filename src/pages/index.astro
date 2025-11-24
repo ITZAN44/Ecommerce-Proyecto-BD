@@ -1,191 +1,581 @@
 ---
 import Layout from '../layouts/Layout.astro';
+import Icon from '../components/Icon.astro';
+import LineChart from '../components/charts/LineChart.astro';
+import BarChart from '../components/charts/BarChart.astro';
+import DoughnutChart from '../components/charts/DoughnutChart.astro';
 import { query } from '../lib/db';
 
-// Obtener estadísticas básicas
-let stats = {
-  totalProductos: 0,
-  totalClientes: 0,
-  totalPedidos: 0,
-  totalCategorias: 0
+let dashboardStats = {
+  total_pedidos_hoy: 0,
+  total_pedidos_pendientes: 0,
+  total_pedidos_completados: 0,
+  ventas_hoy: 0,
+  ventas_mes: 0,
+  total_clientes_activos: 0,
+  total_productos_activos: 0,
+  productos_stock_bajo: 0
 };
 
+let alertasStock: any[] = [];
+let topProductos: any[] = [];
+let clientesVIP: any[] = [];
+let actividadReciente: any[] = [];
+
 try {
-  const productosRes = await query('SELECT COUNT(*) as count FROM productos WHERE estado = $1', ['activo']);
-  const clientesRes = await query('SELECT COUNT(*) as count FROM clientes WHERE estado = $1', ['activo']);
-  const pedidosRes = await query('SELECT COUNT(*) as count FROM pedidos');
-  const categoriasRes = await query('SELECT COUNT(*) as count FROM categorias WHERE estado = $1', ['activo']);
-  
-  stats = {
-    totalProductos: parseInt(productosRes.rows[0].count),
-    totalClientes: parseInt(clientesRes.rows[0].count),
-    totalPedidos: parseInt(pedidosRes.rows[0].count),
-    totalCategorias: parseInt(categoriasRes.rows[0].count)
-  };
+  const statsRes = await query('SELECT * FROM fn_estadisticas_dashboard()');
+  if (statsRes.rows.length > 0) {
+    dashboardStats = statsRes.rows[0];
+  }
+
+  const alertasRes = await query("SELECT * FROM fn_alerta_stock_bajo(15) WHERE nivel_criticidad IN ('CRÍTICO', 'URGENTE', 'ADVERTENCIA') LIMIT 5");
+  alertasStock = alertasRes.rows;
+
+  const topProdRes = await query('SELECT * FROM mv_productos_top_ventas LIMIT 3');
+  topProductos = topProdRes.rows;
+
+  const vipRes = await query('SELECT * FROM mv_clientes_vip LIMIT 5');
+  clientesVIP = vipRes.rows;
+
+  const auditoriaRes = await query('SELECT auditoria_id, tabla, operacion, usuario, fecha, registro_id FROM auditoria ORDER BY fecha DESC LIMIT 10');
+  actividadReciente = auditoriaRes.rows;
 } catch (error) {
   console.error('Error al obtener estadísticas:', error);
 }
+
+const statCards = [
+  {
+    title: 'Ventas Hoy',
+    value: `$${dashboardStats.ventas_hoy.toLocaleString('es-ES', { minimumFractionDigits: 2 })}`,
+    subtitle: `${dashboardStats.total_pedidos_hoy} pedidos`,
+    icon: 'currency-dollar',
+    color: 'green',
+    link: '/pedidos',
+    bgColor: 'var(--accent-green)',
+  },
+  {
+    title: 'Ventas del Mes',
+    value: `$${dashboardStats.ventas_mes.toLocaleString('es-ES', { minimumFractionDigits: 2 })}`,
+    subtitle: `${dashboardStats.total_pedidos_completados} completados`,
+    icon: 'chart-bar',
+    color: 'blue',
+    link: '/pedidos',
+    bgColor: 'var(--accent-blue)',
+  },
+  {
+    title: 'Pedidos Pendientes',
+    value: dashboardStats.total_pedidos_pendientes,
+    subtitle: 'Requieren atención',
+    icon: 'clock',
+    color: 'yellow',
+    link: '/pedidos',
+    bgColor: 'var(--accent-yellow)',
+  },
+  {
+    title: 'Alertas de Stock',
+    value: dashboardStats.productos_stock_bajo,
+    subtitle: alertasStock.length > 0 ? `${alertasStock.length} críticos` : 'Todo OK',
+    icon: 'exclamation-triangle',
+    color: alertasStock.length > 0 ? 'red' : 'green',
+    link: '/stock',
+    bgColor: alertasStock.length > 0 ? '#ef4444' : 'var(--accent-green)',
+  },
+];
+
+const quickAccessModules = [
+  { href: '/productos', icon: 'shopping-bag', title: 'Productos', desc: 'Gestionar catálogo de productos' },
+  { href: '/categorias', icon: 'tag', title: 'Categorías', desc: 'Organizar productos por categoría' },
+  { href: '/stock', icon: 'cube', title: 'Inventario', desc: 'Control de stock y almacén' },
+  { href: '/clientes', icon: 'users', title: 'Clientes', desc: 'Base de datos de clientes' },
+  { href: '/pedidos', icon: 'rectangle-stack', title: 'Pedidos', desc: 'Gestionar órdenes de compra' },
+  { href: '/pagos', icon: 'credit-card', title: 'Pagos', desc: 'Transacciones y cobros' },
+  { href: '/envios', icon: 'truck', title: 'Envíos', desc: 'Seguimiento de entregas' },
+  { href: '/cupones', icon: 'ticket', title: 'Cupones', desc: 'Descuentos y promociones' },
+  { href: '/devoluciones', icon: 'arrow-path', title: 'Devoluciones', desc: 'Gestión de reembolsos' },
+  { href: '/test-endpoints', icon: 'clipboard-document-check', title: 'Test Endpoints', desc: 'Pruebas de API - Fase 1' },
+];
 ---
 
 <Layout title="Dashboard">
-  <div class="px-4 sm:px-0">
-    <h1 class="text-3xl font-bold text-gray-900 mb-8">Dashboard E-commerce</h1>
-    
-    <!-- Estadísticas -->
-    <div class="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4 mb-8">
-      <div class="bg-white overflow-hidden shadow rounded-lg">
-        <div class="p-5">
-          <div class="flex items-center">
-            <div class="shrink-0">
-              <span class="text-4xl">📦</span>
-            </div>
-            <div class="ml-5 w-0 flex-1">
-              <dl>
-                <dt class="text-sm font-medium text-gray-500 truncate">
-                  Productos Activos
-                </dt>
-                <dd class="text-3xl font-semibold text-gray-900">
-                  {stats.totalProductos}
-                </dd>
-              </dl>
-            </div>
-          </div>
-        </div>
-        <div class="bg-gray-50 px-5 py-3">
-          <a href="/productos" class="text-sm font-medium text-blue-600 hover:text-blue-500">
-            Ver todos →
-          </a>
-        </div>
-      </div>
+  <!-- Welcome Section -->
+  <div class="mb-8">
+    <h1 class="text-3xl font-bold mb-2" style="color: var(--text-primary);">
+      Panel de Control
+    </h1>
+    <p class="text-base" style="color: var(--text-secondary);">
+      Bienvenido al sistema de gestión E-commerce
+    </p>
+  </div>
 
-      <div class="bg-white overflow-hidden shadow rounded-lg">
-        <div class="p-5">
-          <div class="flex items-center">
-            <div class="shrink-0">
-              <span class="text-4xl">👥</span>
-            </div>
-            <div class="ml-5 w-0 flex-1">
-              <dl>
-                <dt class="text-sm font-medium text-gray-500 truncate">
-                  Clientes Activos
-                </dt>
-                <dd class="text-3xl font-semibold text-gray-900">
-                  {stats.totalClientes}
-                </dd>
-              </dl>
-            </div>
+  <!-- Estadísticas Cards (Fase 1 - fn_estadisticas_dashboard) -->
+  <div class="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4 mb-8">
+    {statCards.map(card => (
+      <div class="stat-card group">
+        <div class="flex items-center justify-between">
+          <div class="flex-1">
+            <p class="text-sm font-medium mb-1" style="color: var(--text-secondary);">
+              {card.title}
+            </p>
+            <p class="text-2xl font-bold mb-1" style="color: var(--text-primary);">
+              {card.value}
+            </p>
+            <p class="text-xs" style="color: var(--text-secondary);">
+              {card.subtitle}
+            </p>
+          </div>
+          <div class="stat-icon" style={`background-color: ${card.bgColor}`}>
+            <Icon name={card.icon} size={24} class="text-white" />
           </div>
         </div>
-        <div class="bg-gray-50 px-5 py-3">
-          <a href="/clientes" class="text-sm font-medium text-blue-600 hover:text-blue-500">
-            Ver todos →
+        <div class="mt-4 pt-4 border-t" style="border-color: var(--border-primary);">
+          <a
+            href={card.link}
+            class="text-sm font-medium flex items-center space-x-1 group-hover:translate-x-1 transition-transform"
+            style="color: var(--text-secondary);"
+          >
+            <span>Ver detalles</span>
+            <Icon name="arrow-left" size={16} class="rotate-180" />
           </a>
         </div>
       </div>
+    ))}
+  </div>
 
-      <div class="bg-white overflow-hidden shadow rounded-lg">
-        <div class="p-5">
-          <div class="flex items-center">
-            <div class="shrink-0">
-              <span class="text-4xl">🛍️</span>
-            </div>
-            <div class="ml-5 w-0 flex-1">
-              <dl>
-                <dt class="text-sm font-medium text-gray-500 truncate">
-                  Total Pedidos
-                </dt>
-                <dd class="text-3xl font-semibold text-gray-900">
-                  {stats.totalPedidos}
-                </dd>
-              </dl>
-            </div>
-          </div>
+  <!-- Widgets Fase 1 -->
+  <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+    <!-- Alertas de Stock Crítico -->
+    <div class="card">
+      <div class="flex items-center justify-between mb-4">
+        <div class="flex items-center space-x-3">
+          <Icon name="exclamation-triangle" size={24} style="color: var(--accent-yellow);" />
+          <h3 class="text-lg font-bold" style="color: var(--text-primary);">
+            Alertas de Inventario
+          </h3>
         </div>
-        <div class="bg-gray-50 px-5 py-3">
-          <a href="/pedidos" class="text-sm font-medium text-blue-600 hover:text-blue-500">
-            Ver todos →
-          </a>
-        </div>
+        <a href="/stock" class="text-sm" style="color: var(--accent-blue);">Ver todo</a>
       </div>
-
-      <div class="bg-white overflow-hidden shadow rounded-lg">
-        <div class="p-5">
-          <div class="flex items-center">
-            <div class="shrink-0">
-              <span class="text-4xl">📂</span>
+      {alertasStock.length > 0 ? (
+        <div class="space-y-2">
+          {alertasStock.map(alerta => (
+            <div class="flex items-center justify-between p-3 rounded" style="background-color: var(--bg-tertiary);">
+              <div class="flex-1">
+                <p class="font-medium text-sm" style="color: var(--text-primary);">{alerta.nombre_producto}</p>
+                <p class="text-xs" style="color: var(--text-secondary);">SKU: {alerta.sku}</p>
+              </div>
+              <div class="text-right">
+                <p class="text-sm font-bold" style={`color: ${alerta.nivel_criticidad === 'CRÍTICO' ? '#ef4444' : '#f59e0b'}`}>
+                  {alerta.cantidad_disponible} unidades
+                </p>
+                <p class="text-xs" style="color: var(--text-secondary);">{alerta.nivel_criticidad}</p>
+              </div>
             </div>
-            <div class="ml-5 w-0 flex-1">
-              <dl>
-                <dt class="text-sm font-medium text-gray-500 truncate">
-                  Categorías
-                </dt>
-                <dd class="text-3xl font-semibold text-gray-900">
-                  {stats.totalCategorias}
-                </dd>
-              </dl>
-            </div>
-          </div>
+          ))}
         </div>
-        <div class="bg-gray-50 px-5 py-3">
-          <a href="/categorias" class="text-sm font-medium text-blue-600 hover:text-blue-500">
-            Ver todas →
-          </a>
+      ) : (
+        <div class="text-center py-6" style="color: var(--text-secondary);">
+          <Icon name="check-circle" size={48} style="color: var(--accent-green); margin: 0 auto 0.5rem;" />
+          <p>No hay productos con stock bajo</p>
         </div>
-      </div>
+      )}
     </div>
 
-    <!-- Accesos rápidos -->
-    <div class="bg-white shadow rounded-lg p-6">
-      <h2 class="text-xl font-semibold text-gray-900 mb-4">Accesos Rápidos</h2>
-      <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-        <a href="/categorias" class="flex items-center p-4 border-2 border-gray-200 rounded-lg hover:border-blue-500 hover:bg-blue-50 transition">
-          <span class="text-3xl mr-3">📂</span>
-          <div>
-            <h3 class="font-medium text-gray-900">Gestionar Categorías</h3>
-            <p class="text-sm text-gray-500">Crear y editar categorías</p>
-          </div>
-        </a>
-        
-        <a href="/productos" class="flex items-center p-4 border-2 border-gray-200 rounded-lg hover:border-blue-500 hover:bg-blue-50 transition">
-          <span class="text-3xl mr-3">📦</span>
-          <div>
-            <h3 class="font-medium text-gray-900">Gestionar Productos</h3>
-            <p class="text-sm text-gray-500">Crear y editar productos</p>
-          </div>
-        </a>
-        
-        <a href="/stock" class="flex items-center p-4 border-2 border-gray-200 rounded-lg hover:border-blue-500 hover:bg-blue-50 transition">
-          <span class="text-3xl mr-3">📊</span>
-          <div>
-            <h3 class="font-medium text-gray-900">Gestionar Stock</h3>
-            <p class="text-sm text-gray-500">Control de inventario</p>
-          </div>
-        </a>
-        
-        <a href="/cupones" class="flex items-center p-4 border-2 border-gray-200 rounded-lg hover:border-blue-500 hover:bg-blue-50 transition">
-          <span class="text-3xl mr-3">🎟️</span>
-          <div>
-            <h3 class="font-medium text-gray-900">Cupones</h3>
-            <p class="text-sm text-gray-500">Crear y gestionar cupones</p>
-          </div>
-        </a>
-        
-        <a href="/clientes" class="flex items-center p-4 border-2 border-gray-200 rounded-lg hover:border-blue-500 hover:bg-blue-50 transition">
-          <span class="text-3xl mr-3">👥</span>
-          <div>
-            <h3 class="font-medium text-gray-900">Clientes</h3>
-            <p class="text-sm text-gray-500">Gestionar clientes</p>
-          </div>
-        </a>
-        
-        <a href="/pedidos" class="flex items-center p-4 border-2 border-gray-200 rounded-lg hover:border-blue-500 hover:bg-blue-50 transition">
-          <span class="text-3xl mr-3">🛍️</span>
-          <div>
-            <h3 class="font-medium text-gray-900">Pedidos</h3>
-            <p class="text-sm text-gray-500">Ver y gestionar pedidos</p>
-          </div>
-        </a>
+    <!-- Top Productos Vendidos -->
+    <div class="card">
+      <div class="flex items-center justify-between mb-4">
+        <div class="flex items-center space-x-3">
+          <Icon name="star" size={24} style="color: var(--accent-yellow);" />
+          <h3 class="text-lg font-bold" style="color: var(--text-primary);">
+            Productos Más Vendidos
+          </h3>
+        </div>
+        <a href="/productos" class="text-sm" style="color: var(--accent-blue);">Ver todo</a>
+      </div>
+      {topProductos.length > 0 ? (
+        <div class="space-y-2">
+          {topProductos.map((producto, index) => (
+            <div class="flex items-center justify-between p-3 rounded" style="background-color: var(--bg-tertiary);">
+              <div class="flex items-center space-x-3 flex-1">
+                <div class="text-2xl font-bold" style="color: var(--accent-blue);">#{index + 1}</div>
+                <div class="flex-1">
+                  <p class="font-medium text-sm" style="color: var(--text-primary);">{producto.nombre_producto}</p>
+                  <p class="text-xs" style="color: var(--text-secondary);">{producto.nombre_categoria}</p>
+                </div>
+              </div>
+              <div class="text-right">
+                <p class="font-bold text-sm" style="color: var(--accent-green);">
+                  ${parseFloat(producto.total_ventas).toLocaleString('es-ES')}
+                </p>
+                <p class="text-xs" style="color: var(--text-secondary);">
+                  {producto.cantidad_vendida} vendidos
+                </p>
+              </div>
+            </div>
+          ))}
+        </div>
+      ) : (
+        <div class="text-center py-6" style="color: var(--text-secondary);">
+          <p>No hay datos de productos vendidos</p>
+        </div>
+      )}
+    </div>
+
+    <!-- Quick Stats (Mejorado con Fase 1) -->
+    <div class="card">
+      <div class="flex items-center space-x-3 mb-4">
+        <Icon name="chart-bar" size={24} style="color: var(--accent-green);" />
+        <h3 class="text-lg font-bold" style="color: var(--text-primary);">
+          Resumen General
+        </h3>
+      </div>
+      <div class="space-y-3">
+        <div class="flex justify-between items-center py-2 border-b" style="border-color: var(--border-primary);">
+          <span class="text-sm" style="color: var(--text-secondary);">Productos Activos</span>
+          <span class="text-sm font-medium" style="color: var(--accent-blue);">{dashboardStats.total_productos_activos}</span>
+        </div>
+        <div class="flex justify-between items-center py-2 border-b" style="border-color: var(--border-primary);">
+          <span class="text-sm" style="color: var(--text-secondary);">Clientes Activos</span>
+          <span class="text-sm font-medium" style="color: var(--accent-green);">{dashboardStats.total_clientes_activos}</span>
+        </div>
+        <div class="flex justify-between items-center py-2 border-b" style="border-color: var(--border-primary);">
+          <span class="text-sm" style="color: var(--text-secondary);">Pedidos Completados</span>
+          <span class="text-sm font-medium" style="color: var(--accent-purple);">{dashboardStats.total_pedidos_completados}</span>
+        </div>
+        <div class="flex justify-between items-center py-2">
+          <span class="text-sm" style="color: var(--text-secondary);">Stock Bajo</span>
+          <span class="text-sm font-medium" style={dashboardStats.productos_stock_bajo > 0 ? 'color: #ef4444;' : 'color: var(--accent-green);'}>
+            {dashboardStats.productos_stock_bajo}
+          </span>
+        </div>
       </div>
     </div>
   </div>
+
+  <!-- Clientes VIP -->
+  <div class="card mb-8">
+    <div class="flex items-center justify-between mb-4">
+      <div class="flex items-center space-x-3">
+        <Icon name="star" size={24} style="color: var(--accent-blue);" />
+        <h3 class="text-lg font-bold" style="color: var(--text-primary);">
+          Clientes VIP
+        </h3>
+      </div>
+      <a href="/clientes" class="text-sm" style="color: var(--accent-blue);">Ver todos</a>
+    </div>
+    {clientesVIP.length > 0 && (
+      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4">
+        {clientesVIP.map(cliente => (
+          <div class="p-4 rounded-lg border" style="background-color: var(--bg-tertiary); border-color: var(--border-primary);">
+            <div class="flex items-center justify-between mb-2">
+              <Icon name="users" size={32} style="color: var(--accent-blue);" />
+              <span
+                class="px-2 py-1 rounded text-xs font-bold"
+                style={
+                  cliente.categoria_vip === 'Platinum' ? 'background-color: #9333ea; color: white;' :
+                  cliente.categoria_vip === 'Gold' ? 'background-color: #eab308; color: white;' :
+                  cliente.categoria_vip === 'Silver' ? 'background-color: #9ca3af; color: white;' :
+                  'background-color: #ea580c; color: white;'
+                }
+              >
+                {cliente.categoria_vip}
+              </span>
+            </div>
+            <p class="font-semibold text-sm mb-1" style="color: var(--text-primary);">
+              {cliente.nombre} {cliente.apellido}
+            </p>
+            <p class="text-xs mb-2" style="color: var(--text-secondary);">{cliente.email}</p>
+            <div class="text-xs space-y-1">
+              <div class="flex justify-between">
+                <span style="color: var(--text-secondary);">Pedidos:</span>
+                <span style="color: var(--text-primary);">{cliente.total_pedidos}</span>
+              </div>
+              <div class="flex justify-between">
+                <span style="color: var(--text-secondary);">Total:</span>
+                <span class="font-bold" style="color: var(--accent-green);">
+                  ${parseFloat(cliente.total_gastado).toLocaleString('es-ES')}
+                </span>
+              </div>
+            </div>
+          </div>
+        ))}
+      </div>
+    )}
+    {clientesVIP.length === 0 && (
+      <div class="text-center py-6" style="color: var(--text-secondary);">
+        <p>No hay clientes VIP disponibles</p>
+      </div>
+    )}
+  </div>
+
+  <!-- Actividad Reciente - Auditoría -->
+  <div class="card mb-8">
+    <div class="flex items-center justify-between mb-4">
+      <div class="flex items-center space-x-3">
+        <Icon name="clock" size={24} style="color: var(--accent-purple);" />
+        <h3 class="text-lg font-bold" style="color: var(--text-primary);">
+          Actividad Reciente
+        </h3>
+      </div>
+      <span class="text-xs px-2 py-1 rounded" style="background-color: var(--bg-tertiary); color: var(--text-secondary);">
+        Últimos 10 cambios
+      </span>
+    </div>
+    {actividadReciente.length > 0 ? (
+      <div class="space-y-2">
+        {actividadReciente.map((actividad) => {
+          const operacionColor =
+            actividad.operacion === 'INSERT' ? '#10b981' :
+            actividad.operacion === 'UPDATE' ? '#f59e0b' :
+            '#ef4444';
+
+          const operacionIcon =
+            actividad.operacion === 'INSERT' ? 'plus-circle' :
+            actividad.operacion === 'UPDATE' ? 'pencil' :
+            'trash';
+
+          const fechaFormateada = new Date(actividad.fecha).toLocaleString('es-ES', {
+            day: '2-digit',
+            month: '2-digit',
+            year: 'numeric',
+            hour: '2-digit',
+            minute: '2-digit'
+          });
+
+          return (
+            <div class="flex items-center justify-between p-3 rounded border" style="background-color: var(--bg-tertiary); border-color: var(--border-primary);">
+              <div class="flex items-center space-x-3 flex-1">
+                <div class="shrink-0">
+                  <Icon name={operacionIcon} size={20} style={`color: ${operacionColor};`} />
+                </div>
+                <div class="flex-1 min-w-0">
+                  <div class="flex items-center space-x-2 mb-1">
+                    <span class="font-semibold text-sm" style="color: var(--text-primary);">
+                      {actividad.tabla.toUpperCase()}
+                    </span>
+                    <span class="text-xs px-2 py-0.5 rounded font-medium" style={`background-color: ${operacionColor}20; color: ${operacionColor};`}>
+                      {actividad.operacion}
+                    </span>
+                  </div>
+                  <div class="flex items-center space-x-3 text-xs" style="color: var(--text-secondary);">
+                    <span>ID: {actividad.registro_id}</span>
+                    <span>•</span>
+                    <span>{actividad.usuario || 'Sistema'}</span>
+                    <span>•</span>
+                    <span>{fechaFormateada}</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    ) : (
+      <div class="text-center py-6" style="color: var(--text-secondary);">
+        <p>No hay actividad reciente</p>
+      </div>
+    )}
+  </div>
+
+  <!-- Gráficos y Visualizaciones (Fase 2) -->
+  <div class="mb-8">
+    <div class="flex items-center space-x-3 mb-6">
+      <Icon name="chart-bar" size={28} style="color: var(--accent-blue);" />
+      <h2 class="text-2xl font-bold" style="color: var(--text-primary);">
+        Análisis y Tendencias
+      </h2>
+    </div>
+
+    <!-- Grid de gráficos -->
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+      <!-- Gráfico de Ventas Diarias -->
+      <div class="card">
+        <LineChart
+          chartId="ventasDiariasChart"
+          title="Ventas Últimos 7 Días"
+          apiEndpoint="/api/analytics/ventas-diarias?dias=7"
+          height={280}
+        />
+      </div>
+
+      <!-- Gráfico de Ventas por Categoría -->
+      <div class="card">
+        <BarChart
+          chartId="ventasCategoriaChart"
+          title="Top 5 Categorías"
+          apiEndpoint="/api/analytics/ventas-categoria?limite=5"
+          height={280}
+        />
+      </div>
+    </div>
+
+    <!-- Grid de gráficos segunda fila -->
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      <!-- Gráfico de Distribución de Estados -->
+      <div class="card">
+        <DoughnutChart
+          chartId="distribucionEstadosChart"
+          title="Distribución de Estados de Pedidos"
+          apiEndpoint="/api/analytics/distribucion-estados"
+          height={280}
+        />
+      </div>
+
+      <!-- Gráfico de Tendencia de Pedidos -->
+      <div class="card">
+        <LineChart
+          chartId="tendenciaPedidosChart"
+          title="Tendencia de Pedidos (30 días)"
+          apiEndpoint="/api/analytics/tendencia-pedidos?dias=30"
+          height={280}
+        />
+      </div>
+    </div>
+  </div>
+
+  <!-- Quick Access Grid -->
+  <div class="card mb-8">
+    <div class="flex items-center justify-between mb-6">
+      <h2 class="text-xl font-bold" style="color: var(--text-primary);">
+        Módulos del Sistema
+      </h2>
+      <Icon name="chart-bar" size={24} style="color: var(--text-secondary);" />
+    </div>
+
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+      {quickAccessModules.map(module => (
+        <a href={module.href} class="quick-access-item group">
+          <div class="flex items-start space-x-4">
+            <div class="quick-access-icon group-hover:scale-110 transition-transform">
+              <Icon name={module.icon} size={24} />
+            </div>
+            <div class="flex-1 min-w-0">
+              <h3 class="font-semibold mb-1" style="color: var(--text-primary);">
+                {module.title}
+              </h3>
+              <p class="text-sm" style="color: var(--text-secondary);">
+                {module.desc}
+              </p>
+            </div>
+            <Icon
+              name="arrow-left"
+              size={20}
+              class="rotate-180 opacity-0 group-hover:opacity-100 group-hover:translate-x-1 transition-all"
+              style="color: var(--text-secondary);"
+            />
+          </div>
+        </a>
+      ))}
+    </div>
+  </div>
+
+  <!-- Sistema Info -->
+  <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+    <!-- Info Card -->
+    <div class="card">
+      <div class="flex items-center space-x-3 mb-4">
+        <Icon name="information-circle" size={24} style="color: var(--accent-blue);" />
+        <h3 class="text-lg font-bold" style="color: var(--text-primary);">
+          Información del Sistema
+        </h3>
+      </div>
+      <div class="space-y-3">
+        <div class="flex justify-between items-center py-2 border-b" style="border-color: var(--border-primary);">
+          <span class="text-sm" style="color: var(--text-secondary);">Base de Datos</span>
+          <span class="text-sm font-medium" style="color: var(--text-primary);">PostgreSQL</span>
+        </div>
+        <div class="flex justify-between items-center py-2 border-b" style="border-color: var(--border-primary);">
+          <span class="text-sm" style="color: var(--text-secondary);">Framework</span>
+          <span class="text-sm font-medium" style="color: var(--text-primary);">Astro v5</span>
+        </div>
+        <div class="flex justify-between items-center py-2">
+          <span class="text-sm" style="color: var(--text-secondary);">Estilos</span>
+          <span class="text-sm font-medium" style="color: var(--text-primary);">Tailwind CSS v4</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Quick Stats (Mejorado con Fase 1) -->
+    <div class="card">
+      <div class="flex items-center space-x-3 mb-4">
+        <Icon name="chart-bar" size={24} style="color: var(--accent-green);" />
+        <h3 class="text-lg font-bold" style="color: var(--text-primary);">
+          Resumen General
+        </h3>
+      </div>
+      <div class="space-y-3">
+        <div class="flex justify-between items-center py-2 border-b" style="border-color: var(--border-primary);">
+          <span class="text-sm" style="color: var(--text-secondary);">Productos Activos</span>
+          <span class="text-sm font-medium" style="color: var(--accent-blue);">{dashboardStats.total_productos_activos}</span>
+        </div>
+        <div class="flex justify-between items-center py-2 border-b" style="border-color: var(--border-primary);">
+          <span class="text-sm" style="color: var(--text-secondary);">Clientes Activos</span>
+          <span class="text-sm font-medium" style="color: var(--accent-green);">{dashboardStats.total_clientes_activos}</span>
+        </div>
+        <div class="flex justify-between items-center py-2 border-b" style="border-color: var(--border-primary);">
+          <span class="text-sm" style="color: var(--text-secondary);">Pedidos Completados</span>
+          <span class="text-sm font-medium" style="color: var(--accent-purple);">{dashboardStats.total_pedidos_completados}</span>
+        </div>
+        <div class="flex justify-between items-center py-2">
+          <span class="text-sm" style="color: var(--text-secondary);">Stock Bajo</span>
+          <span class="text-sm font-medium" style={dashboardStats.productos_stock_bajo > 0 ? 'color: #ef4444;' : 'color: var(--accent-green);'}>
+            {dashboardStats.productos_stock_bajo}
+          </span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <style>
+    .stat-card {
+      background-color: var(--bg-secondary);
+      border: 1px solid var(--border-primary);
+      border-radius: 0.75rem;
+      padding: 1.5rem;
+      transition: all 0.3s ease;
+    }
+
+    .stat-card:hover {
+      transform: translateY(-4px);
+      box-shadow: var(--shadow-lg);
+      border-color: var(--border-secondary);
+    }
+
+    .stat-icon {
+      width: 3rem;
+      height: 3rem;
+      border-radius: 0.75rem;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: transform 0.3s ease;
+    }
+
+    .stat-card:hover .stat-icon {
+      transform: scale(1.1) rotate(5deg);
+    }
+
+    .quick-access-item {
+      background-color: var(--bg-tertiary);
+      border: 1px solid var(--border-primary);
+      border-radius: 0.5rem;
+      padding: 1rem;
+      transition: all 0.2s ease;
+    }
+
+    .quick-access-item:hover {
+      background-color: var(--bg-hover);
+      border-color: var(--border-secondary);
+      box-shadow: var(--shadow-md);
+    }
+
+    .quick-access-icon {
+      width: 2.5rem;
+      height: 2.5rem;
+      border-radius: 0.5rem;
+      background-color: var(--bg-secondary);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--accent-blue);
+    }
+  </style>
 </Layout>

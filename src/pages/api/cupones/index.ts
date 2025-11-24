@@ -4,12 +4,12 @@ import { query } from '../../../lib/db';
 export const GET: APIRoute = async () => {
   try {
     const result = await query(`
-      SELECT cupon_id, codigo_cupon, tipo_descuento, valor_descuento, 
+      SELECT cupon_id, codigo_cupon, tipo_descuento, valor_descuento,
              fecha_expiracion, usos_disponibles, estado, fecha_creacion
       FROM cupones
       ORDER BY cupon_id DESC
     `);
-    
+
     return new Response(JSON.stringify(result.rows), {
       status: 200,
       headers: { 'Content-Type': 'application/json' }
@@ -35,18 +35,17 @@ export const POST: APIRoute = async ({ request }) => {
       data = Object.fromEntries(formData.entries());
     }
 
-    // Actualizar cupón (PUT)
     if (data._method === 'PUT') {
-      const fecha_exp = data.fecha_expiracion && data.fecha_expiracion.trim() !== '' 
-        ? data.fecha_expiracion 
+      const fecha_exp = data.fecha_expiracion && data.fecha_expiracion.trim() !== ''
+        ? data.fecha_expiracion
         : null;
-      const usos = data.usos_disponibles && data.usos_disponibles.trim() !== '' 
-        ? parseInt(data.usos_disponibles) 
+      const usos = data.usos_disponibles && data.usos_disponibles.trim() !== ''
+        ? parseInt(data.usos_disponibles)
         : null;
 
       await query(
-        `UPDATE cupones 
-         SET codigo_cupon = $1, tipo_descuento = $2, valor_descuento = $3, 
+        `UPDATE cupones
+         SET codigo_cupon = $1, tipo_descuento = $2, valor_descuento = $3,
              fecha_expiracion = $4, usos_disponibles = $5
          WHERE cupon_id = $6`,
         [
@@ -64,7 +63,6 @@ export const POST: APIRoute = async ({ request }) => {
       });
     }
 
-    // Cambiar estado (PATCH)
     if (data._method === 'PATCH') {
       await query(
         'UPDATE cupones SET estado = $1 WHERE cupon_id = $2',
@@ -76,12 +74,11 @@ export const POST: APIRoute = async ({ request }) => {
       });
     }
 
-    // Crear nuevo cupón
-    const fecha_exp = data.fecha_expiracion && data.fecha_expiracion.trim() !== '' 
-      ? data.fecha_expiracion 
+    const fecha_exp = data.fecha_expiracion && data.fecha_expiracion.trim() !== ''
+      ? data.fecha_expiracion
       : null;
-    const usos = data.usos_disponibles && data.usos_disponibles.trim() !== '' 
-      ? parseInt(data.usos_disponibles) 
+    const usos = data.usos_disponibles && data.usos_disponibles.trim() !== ''
+      ? parseInt(data.usos_disponibles)
       : null;
 
     await query(

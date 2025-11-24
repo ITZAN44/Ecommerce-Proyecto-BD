@@ -4,7 +4,7 @@ import { query } from '../../../lib/db';
 export const GET: APIRoute = async () => {
   try {
     const result = await query(`
-      SELECT 
+      SELECT
         e.envio_id,
         e.pedido_id,
         e.fecha_envio,
@@ -40,7 +40,6 @@ export const POST: APIRoute = async ({ request }) => {
     const formData = await request.formData();
     const method = formData.get('_method') as string;
 
-    // Actualizar estado de envío usando procedimiento almacenado (PATCH)
     if (method === 'PATCH') {
       const envio_id = parseInt(formData.get('envio_id') as string);
       const nuevo_estado = formData.get('estado_envio') as string;
@@ -49,7 +48,6 @@ export const POST: APIRoute = async ({ request }) => {
 
       console.log('Actualizando envío:', { envio_id, nuevo_estado, transportista, numero_tracking });
 
-      // Primero verificar el estado actual
       const checkResult = await query(
         'SELECT estado_envio FROM envios WHERE envio_id = $1',
         [envio_id]
@@ -66,7 +64,6 @@ export const POST: APIRoute = async ({ request }) => {
         throw new Error('No se puede modificar un envío ya entregado');
       }
 
-      // Llamar al procedimiento almacenado
       await query(
         'CALL sp_actualizar_estado_envio($1, $2, $3, $4)',
         [envio_id, nuevo_estado, transportista, numero_tracking]
@@ -78,7 +75,6 @@ export const POST: APIRoute = async ({ request }) => {
       });
     }
 
-    // Crear nuevo envío (POST)
     const pedido_id = parseInt(formData.get('pedido_id') as string);
     const transportista = formData.get('transportista') as string || null;
     const numero_tracking = formData.get('numero_tracking') as string || null;
@@ -96,21 +92,19 @@ export const POST: APIRoute = async ({ request }) => {
 
   } catch (error: any) {
     console.error('Error en operación de envíos:', error);
-    
-    // Si es un error del procedimiento, redirigir con mensaje
+
     if (error.message && error.message.includes('No se puede modificar')) {
       return new Response(null, {
         status: 303,
-        headers: { 
+        headers: {
           Location: '/envios?error=' + encodeURIComponent(error.message)
         }
       });
     }
-    
-    // Para otros errores, también redirigir con mensaje
+
     return new Response(null, {
       status: 303,
-      headers: { 
+      headers: {
         Location: '/envios?error=' + encodeURIComponent(error.message || 'Error en la operación')
       }
     });

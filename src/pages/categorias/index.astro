@@ -1,5 +1,6 @@
 ---
 import Layout from '../../layouts/Layout.astro';
+import Icon from '../../components/Icon.astro';
 import { query } from '../../lib/db';
 import type { Categoria } from '../../lib/types';
 
@@ -19,169 +20,139 @@ const inactivas = categorias.filter(c => c.estado === 'inactivo').length;
 ---
 
 <Layout title="Categorías">
-  <div class="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-slate-50 py-8">
+  <div class="min-h-screen py-8">
     <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-      
+
       <!-- Header -->
       <div class="mb-8">
         <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <div>
-            <h1 class="text-4xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent flex items-center gap-3">
-              <span class="text-4xl">🏷️</span> Categorías
+            <h1 class="text-4xl font-bold flex items-center gap-3" style="color: var(--text-primary);">
+              <Icon name="tag" size={40} />
+              Categorías
             </h1>
-            <p class="mt-2 text-slate-600">Gestiona las categorías de productos de tu tienda</p>
+            <p class="mt-2" style="color: var(--text-secondary);">Gestiona las categorías de productos de tu tienda</p>
           </div>
           <button
             onclick="document.getElementById('modal-crear').classList.remove('hidden')"
-            class="inline-flex items-center px-6 py-3 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white font-semibold rounded-xl shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-200"
+            class="btn-primary"
           >
-            <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
-            </svg>
+            <Icon name="plus" size={20} />
             Nueva Categoría
           </button>
         </div>
       </div>
 
       {error && (
-        <div class="mb-6 bg-red-50 border-l-4 border-red-500 p-4 rounded-lg">
-          <div class="flex items-center">
-            <svg class="w-6 h-6 text-red-500 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
-            </svg>
-            <p class="text-red-700 font-medium">{error}</p>
+        <div class="mb-6 p-4 rounded-xl border-l-4" style="background-color: var(--bg-secondary); border-color: var(--accent-red);">
+          <div class="flex items-center gap-2">
+            <Icon name="x-circle" size={20} />
+            <p class="font-medium" style="color: var(--accent-red);">{error}</p>
           </div>
         </div>
       )}
 
       <!-- Stats Cards -->
       <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-        <div class="bg-white rounded-2xl shadow-sm hover:shadow-md transition-shadow duration-200 p-6 border border-slate-200">
+        <div class="card">
           <div class="flex items-center justify-between">
             <div>
-              <p class="text-slate-600 text-sm font-medium uppercase tracking-wide">Total</p>
-              <p class="text-3xl font-bold text-slate-900 mt-2">{categorias.length}</p>
+              <p class="text-sm font-medium" style="color: var(--text-tertiary);">Total</p>
+              <p class="text-4xl font-bold mt-2" style="color: var(--text-secondary);">{categorias.length}</p>
             </div>
-            <div class="bg-gradient-to-br from-blue-500 to-blue-600 rounded-2xl p-4 shadow-lg">
-              <svg class="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z"/>
-              </svg>
+            <div class="p-3 rounded-xl" style="background-color: var(--bg-tertiary);">
+              <Icon name="tag" size={32} />
             </div>
           </div>
         </div>
-        
-        <div class="bg-white rounded-2xl shadow-sm hover:shadow-md transition-shadow duration-200 p-6 border border-slate-200">
+
+        <div class="card">
           <div class="flex items-center justify-between">
             <div>
-              <p class="text-slate-600 text-sm font-medium uppercase tracking-wide">Activas</p>
-              <p class="text-3xl font-bold text-green-600 mt-2">{activas}</p>
+              <p class="text-sm font-medium" style="color: var(--text-tertiary);">Activas</p>
+              <p class="text-4xl font-bold mt-2" style="color: var(--accent-green);">{activas}</p>
             </div>
-            <div class="bg-gradient-to-br from-green-500 to-green-600 rounded-2xl p-4 shadow-lg">
-              <svg class="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
-              </svg>
+            <div class="p-3 rounded-xl" style="background-color: var(--bg-tertiary);">
+              <Icon name="check-circle" size={32} />
             </div>
           </div>
         </div>
-        
-        <div class="bg-white rounded-2xl shadow-sm hover:shadow-md transition-shadow duration-200 p-6 border border-slate-200">
+
+        <div class="card">
           <div class="flex items-center justify-between">
             <div>
-              <p class="text-slate-600 text-sm font-medium uppercase tracking-wide">Inactivas</p>
-              <p class="text-3xl font-bold text-red-600 mt-2">{inactivas}</p>
+              <p class="text-sm font-medium" style="color: var(--text-tertiary);">Inactivas</p>
+              <p class="text-4xl font-bold mt-2" style="color: var(--accent-red);">{inactivas}</p>
             </div>
-            <div class="bg-gradient-to-br from-red-500 to-red-600 rounded-2xl p-4 shadow-lg">
-              <svg class="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636"/>
-              </svg>
+            <div class="p-3 rounded-xl" style="background-color: var(--bg-tertiary);">
+              <Icon name="x-circle" size={32} />
             </div>
           </div>
         </div>
       </div>
 
       <!-- Table Card -->
-      <div class="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
+      <div class="card">
         <div class="overflow-x-auto">
-          <table class="min-w-full divide-y divide-slate-200">
-            <thead>
-              <tr class="bg-gradient-to-r from-slate-50 to-slate-100">
-                <th class="px-6 py-4 text-left text-xs font-bold text-slate-700 uppercase tracking-wider">
+          <table class="min-w-full">
+            <thead style="background-color: var(--bg-tertiary); border-bottom: 2px solid var(--border-color);">
+              <tr>
+                <th class="px-6 py-4 text-left text-xs font-bold uppercase tracking-wider" style="color: var(--text-secondary);">
                   Categoría
                 </th>
-                <th class="px-6 py-4 text-left text-xs font-bold text-slate-700 uppercase tracking-wider">
+                <th class="px-6 py-4 text-left text-xs font-bold uppercase tracking-wider" style="color: var(--text-secondary);">
                   Descripción
                 </th>
-                <th class="px-6 py-4 text-center text-xs font-bold text-slate-700 uppercase tracking-wider">
+                <th class="px-6 py-4 text-center text-xs font-bold uppercase tracking-wider" style="color: var(--text-secondary);">
                   Estado
                 </th>
-                <th class="px-6 py-4 text-center text-xs font-bold text-slate-700 uppercase tracking-wider">
+                <th class="px-6 py-4 text-center text-xs font-bold uppercase tracking-wider" style="color: var(--text-secondary);">
                   Fecha Creación
                 </th>
-                <th class="px-6 py-4 text-right text-xs font-bold text-slate-700 uppercase tracking-wider">
+                <th class="px-6 py-4 text-right text-xs font-bold uppercase tracking-wider" style="color: var(--text-secondary);">
                   Acciones
                 </th>
               </tr>
             </thead>
-            <tbody class="bg-white divide-y divide-slate-100">
+            <tbody style="border-top: 1px solid var(--border-color);">
               {categorias.length === 0 ? (
                 <tr>
                   <td colspan="5" class="px-6 py-12 text-center">
                     <div class="flex flex-col items-center justify-center">
-                      <svg class="w-16 h-16 text-slate-300 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z"/>
-                      </svg>
-                      <p class="text-slate-500 text-lg font-medium">No hay categorías registradas</p>
-                      <p class="text-slate-400 text-sm mt-1">Crea tu primera categoría para comenzar</p>
+                      <Icon name="tag" size={64} />
+                      <p class="text-lg font-medium mt-4" style="color: var(--text-secondary);">No hay categorías registradas</p>
+                      <p class="text-sm mt-1" style="color: var(--text-tertiary);">Crea tu primera categoría para comenzar</p>
                     </div>
                   </td>
                 </tr>
               ) : (
                 categorias.map((cat) => (
-                  <tr class="hover:bg-slate-50 transition-colors duration-150">
+                  <tr class="border-b transition-colors duration-150" style="border-color: var(--border-color);" onmouseover="this.style.backgroundColor='var(--bg-tertiary)'" onmouseout="this.style.backgroundColor=''">
                     <td class="px-6 py-4">
-                      <div class="flex items-center">
-                        <div class="shrink-0 h-12 w-12 bg-gradient-to-br from-blue-500 to-purple-600 rounded-xl flex items-center justify-center shadow-md">
-                          <span class="text-white font-bold text-xl">{cat.nombre_categoria.charAt(0).toUpperCase()}</span>
-                        </div>
-                        <div class="ml-4">
-                          <div class="text-sm font-bold text-slate-900">{cat.nombre_categoria}</div>
-                          <div class="text-xs text-slate-500">ID: {cat.categoria_id}</div>
+                      <div class="flex items-center gap-3">
+                        <Icon name="tag" size={20} />
+                        <div>
+                          <div class="text-sm font-bold" style="color: var(--text-primary);">{cat.nombre_categoria}</div>
+                          <div class="text-xs" style="color: var(--text-tertiary);">ID: {cat.categoria_id}</div>
                         </div>
                       </div>
                     </td>
                     <td class="px-6 py-4">
-                      <div class="text-sm text-slate-700 max-w-md">
+                      <div class="text-sm max-w-md" style="color: var(--text-secondary);">
                         {cat.descripcion ? (
                           <span>{cat.descripcion}</span>
                         ) : (
-                          <span class="text-slate-400 italic">Sin descripción</span>
+                          <span style="color: var(--text-tertiary);">Sin descripción</span>
                         )}
                       </div>
                     </td>
                     <td class="px-6 py-4 text-center">
-                      <span class={`inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold ${
-                        cat.estado === 'activo' 
-                          ? 'bg-green-100 text-green-800 ring-1 ring-green-600/20' 
-                          : 'bg-red-100 text-red-800 ring-1 ring-red-600/20'
-                      }`}>
-                        {cat.estado === 'activo' ? (
-                          <>
-                            <svg class="w-3 h-3 mr-1" fill="currentColor" viewBox="0 0 20 20">
-                              <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/>
-                            </svg>
-                            Activo
-                          </>
-                        ) : (
-                          <>
-                            <svg class="w-3 h-3 mr-1" fill="currentColor" viewBox="0 0 20 20">
-                              <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd"/>
-                            </svg>
-                            Inactivo
-                          </>
-                        )}
+                      <span class={`inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-semibold`} style={`color: ${cat.estado === 'activo' ? 'var(--accent-green)' : 'var(--accent-red)'}; background-color: var(--bg-tertiary);`}>
+                        <Icon name={cat.estado === 'activo' ? 'check-circle' : 'x-circle'} size={14} />
+                        {cat.estado === 'activo' ? 'Activo' : 'Inactivo'}
                       </span>
                     </td>
-                    <td class="px-6 py-4 text-center text-sm text-slate-600">
+                    <td class="px-6 py-4 text-center text-sm" style="color: var(--text-secondary);">
                       <div class="font-medium">
                         {new Date(cat.fecha_creacion).toLocaleDateString('es-ES', {
                           day: '2-digit',
@@ -190,33 +161,27 @@ const inactivas = categorias.filter(c => c.estado === 'inactivo').length;
                         })}
                       </div>
                     </td>
-                    <td class="px-6 py-4 text-right">
+                    <td class="px-6 py-4">
                       <div class="flex justify-end gap-2">
                         <button
                           onclick={`editarCategoria(${JSON.stringify(cat)})`}
-                          class="inline-flex items-center px-3 py-2 bg-blue-50 text-blue-700 hover:bg-blue-100 rounded-lg transition-colors duration-150 group"
+                          class="btn-action p-2 rounded-lg transition-all duration-200 hover:scale-110"
+                          style="color: var(--accent-blue);"
+                          onmouseover="this.style.backgroundColor='var(--bg-tertiary)'"
+                          onmouseout="this.style.backgroundColor=''"
                           title="Editar"
                         >
-                          <svg class="w-4 h-4 group-hover:scale-110 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
-                          </svg>
+                          <Icon name="pencil" size={18} />
                         </button>
                         <button
                           onclick={`cambiarEstado(${cat.categoria_id}, '${cat.estado === 'activo' ? 'inactivo' : 'activo'}')`}
-                          class={`inline-flex items-center px-3 py-2 rounded-lg transition-colors duration-150 group ${
-                            cat.estado === 'activo'
-                              ? 'bg-red-50 text-red-700 hover:bg-red-100'
-                              : 'bg-green-50 text-green-700 hover:bg-green-100'
-                          }`}
+                          class="btn-action p-2 rounded-lg transition-all duration-200 hover:scale-110"
+                          style={`color: ${cat.estado === 'activo' ? 'var(--accent-red)' : 'var(--accent-green)'};`}
+                          onmouseover="this.style.backgroundColor='var(--bg-tertiary)'"
+                          onmouseout="this.style.backgroundColor=''"
                           title={cat.estado === 'activo' ? 'Desactivar' : 'Activar'}
                         >
-                          <svg class="w-4 h-4 group-hover:scale-110 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            {cat.estado === 'activo' ? (
-                              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636"/>
-                            ) : (
-                              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
-                            )}
-                          </svg>
+                          <Icon name={cat.estado === 'activo' ? 'x-circle' : 'check-circle'} size={18} />
                         </button>
                       </div>
                     </td>
@@ -231,56 +196,53 @@ const inactivas = categorias.filter(c => c.estado === 'inactivo').length;
   </div>
 
   <!-- Modal Crear -->
-  <div id="modal-crear" class="hidden fixed inset-0 bg-black/60 backdrop-blur-sm overflow-y-auto h-full w-full z-50 flex items-center justify-center p-4">
-    <div class="relative bg-white rounded-2xl shadow-2xl max-w-lg w-full animate-slideIn">
-      <div class="bg-gradient-to-r from-blue-600 to-purple-600 rounded-t-2xl px-6 py-5">
-        <h3 class="text-2xl font-bold text-white flex items-center gap-2">
-          <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
-          </svg>
-          Nueva Categoría
-        </h3>
-      </div>
-      
-      <form method="POST" action="/api/categorias" class="p-6">
-        <div class="space-y-5">
-          <div>
-            <label class="block text-sm font-semibold text-slate-700 mb-2">
-              Nombre de la categoría <span class="text-red-500">*</span>
-            </label>
-            <input
-              type="text"
-              name="nombre_categoria"
-              required
-              placeholder="Ej: Electrónica, Ropa, Deportes..."
-              class="w-full px-4 py-3 border-2 border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 outline-none"
-            />
-          </div>
-          
-          <div>
-            <label class="block text-sm font-semibold text-slate-700 mb-2">
-              Descripción
-            </label>
-            <textarea
-              name="descripcion"
-              rows="4"
-              placeholder="Describe esta categoría..."
-              class="w-full px-4 py-3 border-2 border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 outline-none resize-none"
-            ></textarea>
-          </div>
+  <div id="modal-crear" class="hidden fixed inset-0 z-50 overflow-y-auto">
+    <div class="fixed inset-0 bg-black bg-opacity-70 transition-opacity" onclick="document.getElementById('modal-crear').classList.add('hidden')"></div>
+    <div class="flex min-h-full items-center justify-center p-4">
+      <div class="relative w-full max-w-lg transform overflow-hidden rounded-2xl p-6 shadow-2xl transition-all" style="background-color: var(--bg-secondary);">
+        <div class="border-b pb-4 mb-6" style="border-color: var(--border-color);">
+          <h3 class="text-2xl font-bold flex items-center gap-3" style="color: var(--text-primary);">
+            <Icon name="tag" size={28} />
+            Nueva Categoría
+          </h3>
         </div>
-        
-        <div class="flex gap-3 mt-6">
-          <button
-            type="submit"
-            class="flex-1 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white font-semibold py-3 px-4 rounded-xl shadow-lg hover:shadow-xl transition-all duration-200 transform hover:scale-105"
-          >
-            Crear Categoría
-          </button>
-          <button
-            type="button"
-            onclick="document.getElementById('modal-crear').classList.add('hidden')"
-            class="px-6 bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold py-3 rounded-xl transition-all duration-200"
+
+        <form method="POST" action="/api/categorias">
+          <div class="space-y-5">
+            <div>
+              <label class="block text-sm font-semibold mb-2" style="color: var(--text-secondary);">
+                Nombre de la categoría <span style="color: var(--accent-red);">*</span>
+              </label>
+              <input
+                type="text"
+                name="nombre_categoria"
+                required
+                placeholder="Ej: Electrónica, Ropa, Deportes..."
+                class="input"
+              />
+            </div>
+
+            <div>
+              <label class="block text-sm font-semibold mb-2" style="color: var(--text-secondary);">
+                Descripción
+              </label>
+              <textarea
+                name="descripcion"
+                rows="4"
+                placeholder="Describe esta categoría..."
+                class="input resize-none"
+              ></textarea>
+            </div>
+          </div>
+
+          <div class="flex gap-3 mt-6">
+            <button type="submit" class="flex-1 btn-primary">
+              Crear Categoría
+            </button>
+            <button
+              type="button"
+              onclick="document.getElementById('modal-crear').classList.add('hidden')"
+              class="btn-secondary"
           >
             Cancelar
           </button>
@@ -290,59 +252,56 @@ const inactivas = categorias.filter(c => c.estado === 'inactivo').length;
   </div>
 
   <!-- Modal Editar -->
-  <div id="modal-editar" class="hidden fixed inset-0 bg-black/60 backdrop-blur-sm overflow-y-auto h-full w-full z-50 flex items-center justify-center p-4">
-    <div class="relative bg-white rounded-2xl shadow-2xl max-w-lg w-full animate-slideIn">
-      <div class="bg-gradient-to-r from-blue-600 to-purple-600 rounded-t-2xl px-6 py-5">
-        <h3 class="text-2xl font-bold text-white flex items-center gap-2">
-          <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
-          </svg>
-          Editar Categoría
-        </h3>
-      </div>
-      
-      <form method="POST" action="/api/categorias" class="p-6">
-        <input type="hidden" name="_method" value="PUT" />
-        <input type="hidden" name="categoria_id" id="edit-id" />
-        
-        <div class="space-y-5">
-          <div>
-            <label class="block text-sm font-semibold text-slate-700 mb-2">
-              Nombre de la categoría <span class="text-red-500">*</span>
-            </label>
+  <div id="modal-editar" class="hidden fixed inset-0 z-50 overflow-y-auto">
+    <div class="fixed inset-0 bg-black bg-opacity-70 transition-opacity" onclick="document.getElementById('modal-editar').classList.add('hidden')"></div>
+    <div class="flex min-h-full items-center justify-center p-4">
+      <div class="relative w-full max-w-lg transform overflow-hidden rounded-2xl p-6 shadow-2xl transition-all" style="background-color: var(--bg-secondary);">
+        <div class="border-b pb-4 mb-6" style="border-color: var(--border-color);">
+          <h3 class="text-2xl font-bold flex items-center gap-3" style="color: var(--text-primary);">
+            <Icon name="pencil" size={28} />
+            Editar Categoría
+          </h3>
+        </div>
+
+        <form method="POST" action="/api/categorias">
+          <input type="hidden" name="_method" value="PUT" />
+          <input type="hidden" name="categoria_id" id="edit-id" />
+
+          <div class="space-y-5">
+            <div>
+              <label class="block text-sm font-semibold mb-2" style="color: var(--text-secondary);">
+                Nombre de la categoría <span style="color: var(--accent-red);">*</span>
+              </label>
             <input
               type="text"
               name="nombre_categoria"
               id="edit-nombre"
               required
-              class="w-full px-4 py-3 border-2 border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 outline-none"
+              class="input"
             />
           </div>
-          
+
           <div>
-            <label class="block text-sm font-semibold text-slate-700 mb-2">
+            <label class="block text-sm font-semibold mb-2" style="color: var(--text-secondary);">
               Descripción
             </label>
             <textarea
               name="descripcion"
               id="edit-descripcion"
               rows="4"
-              class="w-full px-4 py-3 border-2 border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 outline-none resize-none"
+              class="input resize-none"
             ></textarea>
           </div>
         </div>
-        
+
         <div class="flex gap-3 mt-6">
-          <button
-            type="submit"
-            class="flex-1 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white font-semibold py-3 px-4 rounded-xl shadow-lg hover:shadow-xl transition-all duration-200 transform hover:scale-105"
-          >
+          <button type="submit" class="flex-1 btn-primary">
             Guardar Cambios
           </button>
           <button
             type="button"
             onclick="document.getElementById('modal-editar').classList.add('hidden')"
-            class="px-6 bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold py-3 rounded-xl transition-all duration-200"
+            class="btn-secondary"
           >
             Cancelar
           </button>
@@ -360,12 +319,12 @@ const inactivas = categorias.filter(c => c.estado === 'inactivo').length;
     }
 
     async function cambiarEstado(id, nuevoEstado) {
-      const mensaje = nuevoEstado === 'activo' 
-        ? '¿Activar esta categoría?' 
+      const mensaje = nuevoEstado === 'activo'
+        ? '¿Activar esta categoría?'
         : '¿Desactivar esta categoría?';
-      
+
       if (!confirm(mensaje)) return;
-      
+
       try {
         const response = await fetch('/api/categorias', {
           method: 'POST',
@@ -376,7 +335,7 @@ const inactivas = categorias.filter(c => c.estado === 'inactivo').length;
             estado: nuevoEstado
           })
         });
-        
+
         if (response.ok) {
           window.location.reload();
         } else {
@@ -387,7 +346,6 @@ const inactivas = categorias.filter(c => c.estado === 'inactivo').length;
       }
     }
 
-    // Cerrar modal al hacer clic fuera
     const modals = ['modal-crear', 'modal-editar'];
     modals.forEach(modalId => {
       const modal = document.getElementById(modalId);
@@ -400,7 +358,6 @@ const inactivas = categorias.filter(c => c.estado === 'inactivo').length;
       }
     });
 
-    // Cerrar modales con la tecla ESC
     document.addEventListener('keydown', function(e) {
       if (e.key === 'Escape') {
         modals.forEach(modalId => {

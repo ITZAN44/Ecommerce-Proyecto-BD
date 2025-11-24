@@ -1,4 +1,3 @@
-// Tipos para las tablas de la base de datos
 
 export interface Categoria {
   categoria_id: number;
@@ -120,7 +119,6 @@ export interface Devolucion {
   fecha_modificacion: Date | null;
 }
 
-// Tipos para respuestas de funciones
 export interface ProductoMasVendido {
   producto_id: number;
   nombre_producto: string;
@@ -135,4 +133,130 @@ export interface ClienteFrecuente {
   email: string;
   total_pedidos: number;
   total_gastado: number;
+}
+
+export interface EstadisticasDashboard {
+  total_pedidos_hoy: number;
+  total_pedidos_pendientes: number;
+  total_pedidos_completados: number;
+  ventas_hoy: number;
+  ventas_mes: number;
+  total_clientes_activos: number;
+  total_productos_activos: number;
+  productos_stock_bajo: number;
+}
+
+export interface AlertaStock {
+  stock_id: number;
+  producto_id: number;
+  sku: string;
+  nombre_producto: string;
+  cantidad_disponible: number;
+  cantidad_reservada: number;
+  nivel_criticidad: 'CRÍTICO' | 'URGENTE' | 'ADVERTENCIA' | 'NORMAL';
+}
+
+export interface ProductoTopVentas {
+  producto_id: number;
+  nombre_producto: string;
+  descripcion_larga: string | null;
+  nombre_categoria: string;
+  total_vendido: number;
+  ingresos_totales: number;
+  num_pedidos: number;
+  precio_promedio: number;
+}
+
+export interface ClienteVIP {
+  cliente_id: number;
+  nombre: string;
+  apellido: string;
+  email: string;
+  total_pedidos: number;
+  total_gastado: number;
+  ticket_promedio: number;
+  ultima_compra: Date;
+  primera_compra: Date;
+  categoria_vip: 'Platinum' | 'Gold' | 'Silver' | 'Bronze';
+}
+
+export interface RegistroAuditoria {
+  auditoria_id: number;
+  operacion: 'INSERT' | 'UPDATE' | 'DELETE';
+  usuario: string;
+  fecha: Date;
+  cambios: {
+    anterior?: any;
+    nuevo?: any;
+  } | any;
+}
+
+export interface MetricasProducto {
+  producto_id: number;
+  nombre_producto: string;
+  total_vendido: number;
+  ingresos_totales: number;
+  numero_pedidos: number;
+  stock_total: number;
+  stock_reservado: number;
+  precio_promedio: number;
+}
+
+export interface VentaDiaria {
+  fecha: string;
+  total_ventas: number;
+  numero_pedidos: number;
+}
+
+export interface VentaCategoria {
+  categoria_id: number;
+  nombre_categoria: string;
+  total_ventas: number;
+  cantidad_productos_vendidos: number;
+  numero_pedidos: number;
+}
+
+export interface TendenciaPedido {
+  fecha: string;
+  total_pedidos: number;
+  pedidos_completados: number;
+  pedidos_cancelados: number;
+}
+
+export interface DistribucionEstado {
+  estado_pedido: string;
+  cantidad: number;
+  porcentaje: number;
+}
+
+export interface HistorialEstado {
+  historial_id: number;
+  pedido_id: number;
+  estado_anterior: string | null;
+  estado_nuevo: string;
+  usuario: string;
+  comentario: string | null;
+  fecha_cambio: string;
+  orden?: number;
+}
+
+export interface EstadisticasEstado {
+  estado: string;
+  fecha_inicio: string;
+  fecha_fin: string | null;
+  duracion_horas: number;
+}
+
+export interface TimelinePedidoCompleto {
+  historial_id: number;
+  pedido_id: number;
+  estado_anterior: string | null;
+  estado_nuevo: string;
+  usuario: string;
+  comentario: string | null;
+  fecha_cambio: string;
+  cliente_id: number;
+  nombre_cliente: string;
+  total_pedido: number;
+  fecha_pedido: string;
 }

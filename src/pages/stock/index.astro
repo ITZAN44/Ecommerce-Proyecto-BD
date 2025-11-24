@@ -1,5 +1,6 @@
 ---
 import Layout from '../../layouts/Layout.astro';
+import Icon from '../../components/Icon.astro';
 import { query } from '../../lib/db';
 
 let stock: any[] = [];
@@ -8,7 +9,7 @@ let error = '';
 
 try {
   const resultStock = await query(`
-    SELECT s.stock_id, s.producto_id, s.sku, s.precio_unitario, 
+    SELECT s.stock_id, s.producto_id, s.sku, s.precio_unitario,
            s.cantidad_en_stock, s.cantidad_reservada, s.estado, s.fecha_creacion,
            p.nombre_producto, c.nombre_categoria,
            (s.cantidad_en_stock - s.cantidad_reservada) as disponible
@@ -21,8 +22,8 @@ try {
   stock = resultStock.rows;
 
   const resultProductos = await query(`
-    SELECT p.producto_id, p.nombre_producto 
-    FROM productos p 
+    SELECT p.producto_id, p.nombre_producto
+    FROM productos p
     INNER JOIN categorias c ON p.categoria_id = c.categoria_id
     WHERE p.estado = 'activo' AND c.estado = 'activo'
     ORDER BY p.nombre_producto
@@ -40,241 +41,228 @@ const stockReservado = stock.reduce((sum, s) => sum + parseInt(s.cantidad_reserv
 ---
 
 <Layout title="Stock / Inventario">
-  <div class="min-h-screen bg-gradient-to-br from-slate-50 via-green-50 to-slate-50 py-8">
-    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-      
-      <!-- Header -->
-      <div class="mb-8">
-        <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-          <div>
-            <h1 class="text-4xl font-bold bg-gradient-to-r from-green-600 to-emerald-600 bg-clip-text text-transparent flex items-center gap-3">
-              <span class="text-4xl">📊</span> Inventario / Stock
-            </h1>
-            <p class="mt-2 text-slate-600">Gestiona SKUs, stock disponible y reabastecimientos</p>
-          </div>
-          <button
-            onclick="document.getElementById('modal-crear').classList.remove('hidden')"
-            class="inline-flex items-center px-6 py-3 bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white font-semibold rounded-xl shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-200"
-          >
-            <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
-            </svg>
-            Nuevo SKU
-          </button>
+  <!-- Header -->
+  <div class="mb-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+    <div>
+      <h1 class="text-2xl font-bold mb-1" style="color: var(--text-primary);">Gestión de Inventario</h1>
+      <p class="text-sm" style="color: var(--text-secondary);">Control de SKUs, stock disponible y reabastecimientos</p>
+    </div>
+    <button
+      onclick="document.getElementById('modal-crear').classList.remove('hidden')"
+      class="btn-primary inline-flex items-center space-x-2"
+    >
+      <Icon name="plus" size={18} />
+      <span>Nuevo SKU</span>
+    </button>
+  </div>
+
+  {error && (
+    <div class="mb-6 p-4 rounded-lg flex items-center space-x-3"
+         style="background-color: var(--bg-secondary); border-left: 4px solid var(--accent-red);">
+      <Icon name="exclamation-triangle" size={20} style="color: var(--accent-red);" />
+      <p style="color: var(--text-primary);">{error}</p>
+    </div>
+  )}
+
+  <!-- Stats Cards -->
+  <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+    <div class="card">
+      <div class="flex items-center justify-between">
+        <div>
+          <p class="text-sm mb-1" style="color: var(--text-secondary);">Total SKUs</p>
+          <p class="text-2xl font-bold" style="color: var(--text-primary);">{stock.length}</p>
+        </div>
+        <div class="w-12 h-12 rounded-lg flex items-center justify-center" style="background-color: var(--accent-blue);">
+          <Icon name="cube" size={24} class="text-white" />
         </div>
       </div>
+    </div>
 
-      {error && (
-        <div class="mb-6 bg-red-50 border-l-4 border-red-500 p-4 rounded-lg">
-          <div class="flex items-center">
-            <svg class="w-5 h-5 text-red-500 mr-2" fill="currentColor" viewBox="0 0 20 20">
-              <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd"/>
-            </svg>
-            <p class="text-red-700 font-medium">{error}</p>
-          </div>
+    <div class="card">
+      <div class="flex items-center justify-between">
+        <div>
+          <p class="text-sm mb-1" style="color: var(--text-secondary);">SKUs Activos</p>
+          <p class="text-2xl font-bold" style="color: var(--accent-green);">{activos}</p>
         </div>
-      )}
-
-      <!-- Stats Cards -->
-      <div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
-        <div class="bg-gradient-to-br from-green-500 to-emerald-600 rounded-2xl p-6 text-white shadow-xl transform hover:scale-105 transition-all duration-200">
-          <div class="flex items-center justify-between">
-            <div>
-              <p class="text-green-100 text-sm font-medium">Total SKUs</p>
-              <p class="text-4xl font-bold mt-2">{stock.length}</p>
-            </div>
-            <div class="bg-white/20 p-4 rounded-xl backdrop-blur-sm">
-              <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"/>
-              </svg>
-            </div>
-          </div>
-        </div>
-
-        <div class="bg-gradient-to-br from-blue-500 to-blue-600 rounded-2xl p-6 text-white shadow-xl transform hover:scale-105 transition-all duration-200">
-          <div class="flex items-center justify-between">
-            <div>
-              <p class="text-blue-100 text-sm font-medium">SKUs Activos</p>
-              <p class="text-4xl font-bold mt-2">{activos}</p>
-            </div>
-            <div class="bg-white/20 p-4 rounded-xl backdrop-blur-sm">
-              <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
-              </svg>
-            </div>
-          </div>
-        </div>
-
-        <div class="bg-gradient-to-br from-purple-500 to-pink-600 rounded-2xl p-6 text-white shadow-xl transform hover:scale-105 transition-all duration-200">
-          <div class="flex items-center justify-between">
-            <div>
-              <p class="text-purple-100 text-sm font-medium">Stock Total</p>
-              <p class="text-4xl font-bold mt-2">{totalStock.toLocaleString()}</p>
-            </div>
-            <div class="bg-white/20 p-4 rounded-xl backdrop-blur-sm">
-              <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4"/>
-              </svg>
-            </div>
-          </div>
-        </div>
-
-        <div class="bg-gradient-to-br from-orange-500 to-red-600 rounded-2xl p-6 text-white shadow-xl transform hover:scale-105 transition-all duration-200">
-          <div class="flex items-center justify-between">
-            <div>
-              <p class="text-orange-100 text-sm font-medium">Stock Reservado</p>
-              <p class="text-4xl font-bold mt-2">{stockReservado.toLocaleString()}</p>
-            </div>
-            <div class="bg-white/20 p-4 rounded-xl backdrop-blur-sm">
-              <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/>
-              </svg>
-            </div>
-          </div>
+        <div class="w-12 h-12 rounded-lg flex items-center justify-center" style="background-color: var(--accent-green);">
+          <Icon name="check-circle" size={24} class="text-white" />
         </div>
       </div>
+    </div>
 
-      <!-- Tabla de Stock -->
-      <div class="bg-white rounded-2xl shadow-xl overflow-hidden border border-slate-200">
-        <div class="overflow-x-auto">
-          <table class="min-w-full divide-y divide-slate-200">
-            <thead class="bg-gradient-to-r from-slate-50 to-slate-100">
-              <tr>
-                <th class="px-6 py-4 text-left text-xs font-bold text-slate-700 uppercase tracking-wider">SKU</th>
-                <th class="px-6 py-4 text-left text-xs font-bold text-slate-700 uppercase tracking-wider">Producto</th>
-                <th class="px-6 py-4 text-left text-xs font-bold text-slate-700 uppercase tracking-wider">Categoría</th>
-                <th class="px-6 py-4 text-left text-xs font-bold text-slate-700 uppercase tracking-wider">Precio</th>
-                <th class="px-6 py-4 text-left text-xs font-bold text-slate-700 uppercase tracking-wider">En Stock</th>
-                <th class="px-6 py-4 text-left text-xs font-bold text-slate-700 uppercase tracking-wider">Reservado</th>
-                <th class="px-6 py-4 text-left text-xs font-bold text-slate-700 uppercase tracking-wider">Disponible</th>
-                <th class="px-6 py-4 text-left text-xs font-bold text-slate-700 uppercase tracking-wider">Estado</th>
-                <th class="px-6 py-4 text-left text-xs font-bold text-slate-700 uppercase tracking-wider">Acciones</th>
-              </tr>
-            </thead>
-            <tbody class="bg-white divide-y divide-slate-200">
-              {stock.map((item) => (
-                <tr class="hover:bg-slate-50 transition-colors duration-150">
-                  <td class="px-6 py-4 whitespace-nowrap">
-                    <span class="font-mono text-sm font-semibold text-slate-700">{item.sku}</span>
-                  </td>
-                  <td class="px-6 py-4">
-                    <div class="text-sm font-semibold text-slate-900">{item.nombre_producto}</div>
-                  </td>
-                  <td class="px-6 py-4 whitespace-nowrap">
-                    <span class="text-sm text-slate-600">{item.nombre_categoria}</span>
-                  </td>
-                  <td class="px-6 py-4 whitespace-nowrap">
-                    <span class="text-sm font-bold text-green-600">${parseFloat(item.precio_unitario).toFixed(2)}</span>
-                  </td>
-                  <td class="px-6 py-4 whitespace-nowrap">
-                    <span class={`inline-flex items-center px-3 py-1 rounded-full text-sm font-bold ${
-                      item.cantidad_en_stock > 50 ? 'bg-green-100 text-green-800' :
-                      item.cantidad_en_stock > 10 ? 'bg-yellow-100 text-yellow-800' :
-                      'bg-red-100 text-red-800'
-                    }`}>
-                      {item.cantidad_en_stock}
-                    </span>
-                  </td>
-                  <td class="px-6 py-4 whitespace-nowrap">
-                    <span class="text-sm font-semibold text-orange-600">{item.cantidad_reservada}</span>
-                  </td>
-                  <td class="px-6 py-4 whitespace-nowrap">
-                    <span class={`inline-flex items-center px-3 py-1 rounded-full text-sm font-bold ${
-                      item.disponible > 20 ? 'bg-emerald-100 text-emerald-800' :
-                      item.disponible > 0 ? 'bg-amber-100 text-amber-800' :
-                      'bg-red-100 text-red-800'
-                    }`}>
-                      {item.disponible}
-                    </span>
-                  </td>
-                  <td class="px-6 py-4 whitespace-nowrap">
-                    <span class={`inline-flex px-3 py-1 text-xs font-bold rounded-full ${
-                      item.estado === 'activo' 
-                        ? 'bg-green-100 text-green-800' 
-                        : 'bg-slate-100 text-slate-800'
-                    }`}>
-                      {item.estado}
-                    </span>
-                  </td>
-                  <td class="px-6 py-4 whitespace-nowrap text-sm">
-                    <div class="flex gap-2">
-                      <button
-                        onclick={`reabastecer(${item.stock_id}, ${JSON.stringify(item.sku)}, ${JSON.stringify(item.nombre_producto)}, ${item.precio_unitario})`}
-                        class="text-green-600 hover:text-green-800 font-semibold hover:bg-green-50 p-2 rounded-lg transition-colors"
-                        title="Reabastecer"
-                      >
-                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"/>
-                        </svg>
-                      </button>
-                      <button
-                        onclick={`editar(${item.stock_id}, ${JSON.stringify(item.sku)}, ${item.producto_id}, ${item.precio_unitario}, ${item.cantidad_en_stock})`}
-                        class="text-blue-600 hover:text-blue-800 font-semibold hover:bg-blue-50 p-2 rounded-lg transition-colors"
-                        title="Editar"
-                      >
-                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
-                        </svg>
-                      </button>
-                      <button
-                        onclick={`cambiarEstado(${item.stock_id}, ${JSON.stringify(item.estado === 'activo' ? 'inactivo' : 'activo')})`}
-                        class={`font-semibold p-2 rounded-lg transition-colors ${
-                          item.estado === 'activo' 
-                            ? 'text-red-600 hover:text-red-800 hover:bg-red-50' 
-                            : 'text-green-600 hover:text-green-800 hover:bg-green-50'
-                        }`}
-                        title={item.estado === 'activo' ? 'Desactivar' : 'Activar'}
-                      >
-                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d={
-                            item.estado === 'activo' 
-                              ? "M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636"
-                              : "M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
-                          }/>
-                        </svg>
-                      </button>
-                      <button
-                        onclick={`eliminarStock(${item.stock_id}, '${item.sku.replace(/'/g, "\\'")}')`}
-                        class="text-rose-600 hover:text-rose-800 font-semibold hover:bg-rose-50 p-2 rounded-lg transition-colors"
-                        title="Eliminar Permanentemente"
-                      >
-                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
-                        </svg>
-                      </button>
-                    </div>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+    <div class="card">
+      <div class="flex items-center justify-between">
+        <div>
+          <p class="text-sm mb-1" style="color: var(--text-secondary);">Stock Total</p>
+          <p class="text-2xl font-bold" style="color: var(--accent-purple);">{totalStock}</p>
+        </div>
+        <div class="w-12 h-12 rounded-lg flex items-center justify-center" style="background-color: var(--accent-purple);">
+          <Icon name="rectangle-stack" size={24} class="text-white" />
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="flex items-center justify-between">
+        <div>
+          <p class="text-sm mb-1" style="color: var(--text-secondary);">Reservado</p>
+          <p class="text-2xl font-bold" style="color: var(--accent-yellow);">{stockReservado}</p>
+        </div>
+        <div class="w-12 h-12 rounded-lg flex items-center justify-center" style="background-color: var(--accent-yellow);">
+          <Icon name="clock" size={24} class="text-white" />
         </div>
       </div>
     </div>
   </div>
 
+  <!-- Tabla de Stock -->
+  <div class="card overflow-hidden">
+    <div class="overflow-x-auto">
+      <table class="min-w-full">
+        <thead>
+          <tr style="border-bottom: 1px solid var(--border-primary);">
+            <th class="px-6 py-4 text-left text-xs font-bold uppercase tracking-wider" style="color: var(--text-secondary);">SKU</th>
+            <th class="px-6 py-4 text-left text-xs font-bold uppercase tracking-wider" style="color: var(--text-secondary);">Producto</th>
+            <th class="px-6 py-4 text-left text-xs font-bold uppercase tracking-wider" style="color: var(--text-secondary);">Categoría</th>
+            <th class="px-6 py-4 text-right text-xs font-bold uppercase tracking-wider" style="color: var(--text-secondary);">Precio</th>
+            <th class="px-6 py-4 text-center text-xs font-bold uppercase tracking-wider" style="color: var(--text-secondary);">En Stock</th>
+            <th class="px-6 py-4 text-center text-xs font-bold uppercase tracking-wider" style="color: var(--text-secondary);">Reservado</th>
+            <th class="px-6 py-4 text-center text-xs font-bold uppercase tracking-wider" style="color: var(--text-secondary);">Disponible</th>
+            <th class="px-6 py-4 text-center text-xs font-bold uppercase tracking-wider" style="color: var(--text-secondary);">Estado</th>
+            <th class="px-6 py-4 text-right text-xs font-bold uppercase tracking-wider" style="color: var(--text-secondary);">Acciones</th>
+          </tr>
+        </thead>
+        <tbody>
+          {stock.length === 0 ? (
+            <tr>
+              <td colspan="9" class="px-6 py-12 text-center">
+                <div class="flex flex-col items-center justify-center">
+                  <Icon name="cube" size={48} style="color: var(--text-muted);" class="mb-4" />
+                  <p class="text-base font-medium mb-1" style="color: var(--text-secondary);">No hay SKUs registrados</p>
+                  <p class="text-sm" style="color: var(--text-muted);">Crea tu primer SKU para comenzar</p>
+                </div>
+              </td>
+            </tr>
+          ) : (
+            stock.map((item) => (
+              <tr class="border-b transition-colors"
+                  style="border-color: var(--border-primary);"
+                  onmouseenter="this.style.backgroundColor='var(--bg-tertiary)'"
+                  onmouseleave="this.style.backgroundColor='transparent'">
+                <td class="px-6 py-4">
+                  <span class="font-mono text-sm font-semibold" style="color: var(--text-primary);">{item.sku}</span>
+                </td>
+                <td class="px-6 py-4">
+                  <div class="text-sm font-medium" style="color: var(--text-primary);">{item.nombre_producto}</div>
+                </td>
+                <td class="px-6 py-4">
+                  <span class="inline-flex items-center px-2.5 py-0.5 rounded-md text-xs font-medium"
+                        style="background-color: var(--bg-tertiary); color: var(--text-primary); border: 1px solid var(--border-primary);">
+                    {item.nombre_categoria}
+                  </span>
+                </td>
+                <td class="px-6 py-4 text-right">
+                  <span class="text-sm font-bold" style="color: var(--accent-green);">${parseFloat(item.precio_unitario).toFixed(2)}</span>
+                </td>
+                <td class="px-6 py-4 text-center">
+                  <span class={`inline-flex items-center px-2.5 py-0.5 rounded-md text-xs font-semibold`}
+                        style={item.cantidad_en_stock > 50
+                          ? 'background-color: rgba(16, 185, 129, 0.1); color: var(--accent-green); border: 1px solid var(--accent-green);'
+                          : item.cantidad_en_stock > 20
+                            ? 'background-color: rgba(245, 158, 11, 0.1); color: var(--accent-yellow); border: 1px solid var(--accent-yellow);'
+                            : 'background-color: rgba(239, 68, 68, 0.1); color: var(--accent-red); border: 1px solid var(--accent-red);'}>
+                    {item.cantidad_en_stock}
+                  </span>
+                </td>
+                <td class="px-6 py-4 text-center">
+                  <span class="text-sm font-medium" style="color: var(--text-secondary);">{item.cantidad_reservada}</span>
+                </td>
+                <td class="px-6 py-4 text-center">
+                  <span class="text-sm font-bold" style="color: var(--accent-blue);">{item.disponible}</span>
+                </td>
+                <td class="px-6 py-4 text-center">
+                  <span class={`inline-flex items-center space-x-1 px-2.5 py-0.5 rounded-md text-xs font-medium`}
+                        style={item.estado === 'activo'
+                          ? 'background-color: rgba(16, 185, 129, 0.1); color: var(--accent-green); border: 1px solid var(--accent-green);'
+                          : 'background-color: rgba(239, 68, 68, 0.1); color: var(--accent-red); border: 1px solid var(--accent-red);'}>
+                    <Icon name={item.estado === 'activo' ? 'check-circle' : 'x-circle'} size={12} />
+                    <span>{item.estado === 'activo' ? 'Activo' : 'Inactivo'}</span>
+                  </span>
+                </td>
+                <td class="px-6 py-4 text-right">
+                  <div class="flex justify-end gap-2">
+                    <button
+                      onclick={`editar(${item.stock_id}, '${item.sku}', ${item.producto_id}, ${item.precio_unitario}, ${item.cantidad_en_stock})`}
+                      class="p-2 rounded-lg transition-all"
+                      style="background-color: var(--bg-tertiary); color: var(--accent-blue);"
+                      onmouseenter="this.style.backgroundColor='var(--bg-hover)'"
+                      onmouseleave="this.style.backgroundColor='var(--bg-tertiary)'"
+                      title="Editar"
+                    >
+                      <Icon name="pencil" size={16} />
+                    </button>
+                    <button
+                      onclick={`reabastecer(${item.stock_id}, '${item.sku}', '${item.nombre_producto.replace(/'/g, "\\'")}', ${item.precio_unitario})`}
+                      class="p-2 rounded-lg transition-all"
+                      style="background-color: rgba(16, 185, 129, 0.1); color: var(--accent-green);"
+                      onmouseenter="this.style.backgroundColor='rgba(16, 185, 129, 0.2)'"
+                      onmouseleave="this.style.backgroundColor='rgba(16, 185, 129, 0.1)'"
+                      title="Reabastecer"
+                    >
+                      <Icon name="arrow-path" size={16} />
+                    </button>
+                    <button
+                      onclick={`cambiarEstado(${item.stock_id}, '${item.estado === 'activo' ? 'inactivo' : 'activo'}')`}
+                      class="p-2 rounded-lg transition-all"
+                      style={item.estado === 'activo'
+                        ? 'background-color: rgba(239, 68, 68, 0.1); color: var(--accent-red);'
+                        : 'background-color: rgba(16, 185, 129, 0.1); color: var(--accent-green);'}
+                      title={item.estado === 'activo' ? 'Desactivar' : 'Activar'}
+                    >
+                      <Icon name={item.estado === 'activo' ? 'x-circle' : 'check-circle'} size={16} />
+                    </button>
+                    <button
+                      onclick={`eliminarStock(${item.stock_id}, '${item.sku}')`}
+                      class="p-2 rounded-lg transition-all"
+                      style="background-color: rgba(239, 68, 68, 0.1); color: var(--accent-red);"
+                      onmouseenter="this.style.backgroundColor='var(--accent-red)'; this.style.color='white';"
+                      onmouseleave="this.style.backgroundColor='rgba(239, 68, 68, 0.1)'; this.style.color='var(--accent-red)';"
+                      title="Eliminar Permanentemente"
+                    >
+                      <Icon name="trash" size={16} />
+                    </button>
+                  </div>
+                </td>
+              </tr>
+            ))
+          )}
+        </tbody>
+      </table>
+    </div>
+  </div>
+
   <!-- Modal Crear SKU -->
-  <div id="modal-crear" class="hidden fixed inset-0 bg-black/60 backdrop-blur-sm overflow-y-auto h-full w-full z-50 flex items-center justify-center p-4">
-    <div class="relative bg-white rounded-2xl shadow-2xl max-w-lg w-full animate-slideIn">
-      <div class="bg-gradient-to-r from-green-600 to-emerald-600 rounded-t-2xl px-6 py-5">
-        <h3 class="text-2xl font-bold text-white flex items-center gap-2">
-          <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
-          </svg>
-          Crear Nuevo SKU
-        </h3>
-      </div>
-      
-      <form action="/api/stock" method="POST" class="p-6">
-        <div class="space-y-5">
-          <div>
-            <label class="block text-sm font-semibold text-slate-700 mb-2">
-              Producto <span class="text-red-500">*</span>
-            </label>
-            <select
-              name="producto_id"
-              required
-              class="w-full px-4 py-3 border-2 border-slate-300 rounded-xl focus:ring-2 focus:ring-green-500 focus:border-transparent transition-all duration-200 outline-none"
+  <div id="modal-crear" class="fixed inset-0 overflow-y-auto h-full w-full z-50 hidden" style="background-color: rgba(0, 0, 0, 0.8);">
+    <div class="flex items-center justify-center min-h-screen p-4">
+      <div class="relative rounded-xl shadow-2xl max-w-lg w-full animate-slideIn" style="background-color: var(--bg-secondary);">
+        <div class="px-6 py-5 border-b" style="border-color: var(--border-primary);">
+          <h3 class="text-xl font-bold flex items-center space-x-2" style="color: var(--text-primary);">
+            <Icon name="plus" size={24} style="color: var(--accent-green);" />
+            <span>Crear Nuevo SKU</span>
+          </h3>
+        </div>
+
+        <form action="/api/stock" method="POST" class="p-6">
+          <div class="space-y-4">
+            <div>
+              <label class="block text-sm font-semibold mb-2" style="color: var(--text-primary);">
+                Producto <span style="color: var(--accent-red);">*</span>
+              </label>
+              <select
+                name="producto_id"
+                required
+                class="w-full px-4 py-3 rounded-lg transition-all outline-none"
+                style="background-color: var(--bg-tertiary); color: var(--text-primary); border: 1px solid var(--border-primary);"
             >
               <option value="">Selecciona un producto</option>
               {productos.map(p => (
@@ -283,251 +271,247 @@ const stockReservado = stock.reduce((sum, s) => sum + parseInt(s.cantidad_reserv
             </select>
           </div>
 
-          <div>
-            <label class="block text-sm font-semibold text-slate-700 mb-2">
-              SKU <span class="text-red-500">*</span>
-            </label>
-            <input
-              type="text"
-              name="sku"
-              required
-              placeholder="Ej: PROD-001-XL"
-              class="w-full px-4 py-3 border-2 border-slate-300 rounded-xl focus:ring-2 focus:ring-green-500 focus:border-transparent transition-all duration-200 outline-none font-mono"
-            />
+            <div>
+              <label class="block text-sm font-semibold mb-2" style="color: var(--text-primary);">
+                SKU <span style="color: var(--accent-red);">*</span>
+              </label>
+              <input
+                type="text"
+                name="sku"
+                required
+                placeholder="Ej: PROD-001-XL"
+                class="w-full px-4 py-3 rounded-lg transition-all outline-none font-mono"
+                style="background-color: var(--bg-tertiary); color: var(--text-primary); border: 1px solid var(--border-primary);"
+              />
           </div>
 
-          <div>
-            <label class="block text-sm font-semibold text-slate-700 mb-2">
-              Precio Unitario <span class="text-red-500">*</span>
-            </label>
-            <div class="relative">
-              <span class="absolute left-4 top-3 text-slate-500 font-semibold">$</span>
+            <div>
+              <label class="block text-sm font-semibold mb-2" style="color: var(--text-primary);">
+                Precio Unitario <span style="color: var(--accent-red);">*</span>
+              </label>
+              <div class="relative">
+                <span class="absolute left-4 top-3 font-semibold" style="color: var(--text-secondary);">$</span>
+                <input
+                  type="number"
+                  name="precio_unitario"
+                  required
+                  min="0"
+                  step="0.01"
+                  class="w-full pl-8 pr-4 py-3 rounded-lg transition-all outline-none"
+                  style="background-color: var(--bg-tertiary); color: var(--text-primary); border: 1px solid var(--border-primary);"
+                />
+              </div>
+          </div>
+
+            <div>
+              <label class="block text-sm font-semibold mb-2" style="color: var(--text-primary);">
+                Cantidad Inicial <span style="color: var(--accent-red);">*</span>
+              </label>
               <input
                 type="number"
-                name="precio_unitario"
+                name="cantidad_en_stock"
                 required
                 min="0"
-                step="0.01"
-                class="w-full pl-8 pr-4 py-3 border-2 border-slate-300 rounded-xl focus:ring-2 focus:ring-green-500 focus:border-transparent transition-all duration-200 outline-none"
+                value="0"
+                class="w-full px-4 py-3 rounded-lg transition-all outline-none"
+                style="background-color: var(--bg-tertiary); color: var(--text-primary); border: 1px solid var(--border-primary);"
               />
             </div>
           </div>
 
-          <div>
-            <label class="block text-sm font-semibold text-slate-700 mb-2">
-              Cantidad Inicial <span class="text-red-500">*</span>
-            </label>
-            <input
-              type="number"
-              name="cantidad_en_stock"
-              required
-              min="0"
-              value="0"
-              class="w-full px-4 py-3 border-2 border-slate-300 rounded-xl focus:ring-2 focus:ring-green-500 focus:border-transparent transition-all duration-200 outline-none"
-            />
+          <div class="flex gap-3 mt-6">
+            <button type="submit" class="btn-success flex-1">
+              Crear SKU
+            </button>
+            <button
+              type="button"
+              onclick="document.getElementById('modal-crear').classList.add('hidden')"
+              class="btn-secondary px-6"
+            >
+              Cancelar
+            </button>
           </div>
-        </div>
-        
-        <div class="flex gap-3 mt-6">
-          <button
-            type="submit"
-            class="flex-1 bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white font-semibold py-3 px-4 rounded-xl shadow-lg hover:shadow-xl transition-all duration-200 transform hover:scale-105"
-          >
-            Crear SKU
-          </button>
-          <button
-            type="button"
-            onclick="document.getElementById('modal-crear').classList.add('hidden')"
-            class="px-6 bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold py-3 rounded-xl transition-all duration-200"
-          >
-            Cancelar
-          </button>
-        </div>
-      </form>
+        </form>
+      </div>
     </div>
   </div>
 
   <!-- Modal Editar SKU -->
-  <div id="modal-editar" class="hidden fixed inset-0 bg-black/60 backdrop-blur-sm overflow-y-auto h-full w-full z-50 flex items-center justify-center p-4">
-    <div class="relative bg-white rounded-2xl shadow-2xl max-w-lg w-full animate-slideIn">
-      <div class="bg-gradient-to-r from-blue-600 to-blue-700 rounded-t-2xl px-6 py-5">
-        <h3 class="text-2xl font-bold text-white flex items-center gap-2">
-          <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
-          </svg>
-          Editar SKU
-        </h3>
-      </div>
-      
-      <form action="/api/stock" method="POST" class="p-6">
-        <input type="hidden" name="_method" value="PUT" />
-        <input type="hidden" name="stock_id" id="edit-stock-id" />
-        
-        <div class="space-y-5">
-          <div>
-            <label class="block text-sm font-semibold text-slate-700 mb-2">
-              Producto <span class="text-red-500">*</span>
-            </label>
-            <select
-              name="producto_id"
-              id="edit-producto"
-              required
-              class="w-full px-4 py-3 border-2 border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 outline-none"
-            >
-              {productos.map(p => (
-                <option value={p.producto_id}>{p.nombre_producto}</option>
-              ))}
-            </select>
-          </div>
+  <div id="modal-editar" class="fixed inset-0 overflow-y-auto h-full w-full z-50 hidden" style="background-color: rgba(0, 0, 0, 0.8);">
+    <div class="flex items-center justify-center min-h-screen p-4">
+      <div class="relative rounded-xl shadow-2xl max-w-lg w-full animate-slideIn" style="background-color: var(--bg-secondary);">
+        <div class="px-6 py-5 border-b" style="border-color: var(--border-primary);">
+          <h3 class="text-xl font-bold flex items-center space-x-2" style="color: var(--text-primary);">
+            <Icon name="pencil" size={24} style="color: var(--accent-blue);" />
+            <span>Editar SKU</span>
+          </h3>
+        </div>
 
-          <div>
-            <label class="block text-sm font-semibold text-slate-700 mb-2">
-              SKU <span class="text-red-500">*</span>
-            </label>
-            <input
-              type="text"
-              name="sku"
-              id="edit-sku"
-              required
-              class="w-full px-4 py-3 border-2 border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 outline-none font-mono"
-            />
-          </div>
+        <form action="/api/stock" method="POST" class="p-6">
+          <input type="hidden" name="_method" value="PUT" />
+          <input type="hidden" name="stock_id" id="edit-stock-id" />
 
-          <div>
-            <label class="block text-sm font-semibold text-slate-700 mb-2">
-              Precio Unitario <span class="text-red-500">*</span>
-            </label>
-            <div class="relative">
-              <span class="absolute left-4 top-3 text-slate-500 font-semibold">$</span>
+          <div class="space-y-4">
+            <div>
+              <label class="block text-sm font-semibold mb-2" style="color: var(--text-primary);">
+                Producto <span style="color: var(--accent-red);">*</span>
+              </label>
+              <select
+                name="producto_id"
+                id="edit-producto"
+                required
+                class="w-full px-4 py-3 rounded-lg transition-all outline-none"
+                style="background-color: var(--bg-tertiary); color: var(--text-primary); border: 1px solid var(--border-primary);"
+              >
+                {productos.map(p => (
+                  <option value={p.producto_id}>{p.nombre_producto}</option>
+                ))}
+              </select>
+            </div>
+
+            <div>
+              <label class="block text-sm font-semibold mb-2" style="color: var(--text-primary);">
+                SKU <span style="color: var(--accent-red);">*</span>
+              </label>
               <input
-                type="number"
+                type="text"
+                name="sku"
+                id="edit-sku"
+                required
+                class="w-full px-4 py-3 rounded-lg transition-all outline-none font-mono"
+                style="background-color: var(--bg-tertiary); color: var(--text-primary); border: 1px solid var(--border-primary);"
+              />
+            </div>
+
+            <div>
+              <label class="block text-sm font-semibold mb-2" style="color: var(--text-primary);">
+                Precio Unitario <span style="color: var(--accent-red);">*</span>
+              </label>
+              <div class="relative">
+                <span class="absolute left-4 top-3 font-semibold" style="color: var(--text-secondary);">$</span>
+                <input
+                  type="number"
                 name="precio_unitario"
                 id="edit-precio"
                 required
                 min="0"
                 step="0.01"
-                class="w-full pl-8 pr-4 py-3 border-2 border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 outline-none"
+                class="w-full pl-8 pr-4 py-3 rounded-lg transition-all outline-none"
+                style="background-color: var(--bg-tertiary); color: var(--text-primary); border: 1px solid var(--border-primary);"
               />
+              </div>
+            </div>
+
+            <div class="p-4 rounded-lg" style="background-color: rgba(59, 130, 246, 0.1); border-left: 3px solid var(--accent-blue);">
+              <p class="text-sm" style="color: var(--text-primary);">
+                <Icon name="information-circle" size={16} class="inline mr-1" style="color: var(--accent-blue);" />
+                Para modificar la cantidad en stock, usa el botón <strong>"Reabastecer Stock"</strong>
+              </p>
             </div>
           </div>
 
-          <div class="bg-blue-50 border-l-4 border-blue-500 p-4 rounded">
-            <p class="text-sm text-blue-800">
-              <svg class="w-4 h-4 inline mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
-              </svg>
-              Para modificar la cantidad en stock, usa el botón <strong>"Reabastecer Stock"</strong> (➕)
-            </p>
+          <div class="flex gap-3 mt-6">
+            <button type="submit" class="btn-primary flex-1">
+              Guardar Cambios
+            </button>
+            <button
+              type="button"
+              onclick="document.getElementById('modal-editar').classList.add('hidden')"
+              class="btn-secondary px-6"
+            >
+              Cancelar
+            </button>
           </div>
-        </div>
-        
-        <div class="flex gap-3 mt-6">
-          <button
-            type="submit"
-            class="flex-1 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white font-semibold py-3 px-4 rounded-xl shadow-lg hover:shadow-xl transition-all duration-200 transform hover:scale-105"
-          >
-            Guardar Cambios
-          </button>
-          <button
-            type="button"
-            onclick="document.getElementById('modal-editar').classList.add('hidden')"
-            class="px-6 bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold py-3 rounded-xl transition-all duration-200"
-          >
-            Cancelar
-          </button>
-        </div>
-      </form>
+        </form>
+      </div>
     </div>
   </div>
 
   <!-- Modal Reabastecer (Stored Procedure) -->
-  <div id="modal-reabastecer" class="hidden fixed inset-0 bg-black/60 backdrop-blur-sm overflow-y-auto h-full w-full z-50 flex items-center justify-center p-4">
-    <div class="relative bg-white rounded-2xl shadow-2xl max-w-lg w-full animate-slideIn">
-      <div class="bg-gradient-to-r from-green-600 to-emerald-700 rounded-t-2xl px-6 py-5">
-        <h3 class="text-2xl font-bold text-white flex items-center gap-2">
-          <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"/>
-          </svg>
-          Reabastecer Stock
-        </h3>
-      </div>
-      
-      <form action="/api/stock/reabastecer" method="POST" class="p-6">
-        <input type="hidden" name="stock_id" id="reab-stock-id" />
-        
-        <div class="bg-blue-50 border-l-4 border-blue-500 p-4 mb-6 rounded">
-          <p class="text-sm text-blue-700">
-            <strong>💡 Procedimiento Almacenado:</strong> Esta acción usa <code class="bg-blue-100 px-2 py-1 rounded">sp_reabastecer_stock()</code>
-          </p>
+  <div id="modal-reabastecer" class="fixed inset-0 overflow-y-auto h-full w-full z-50 hidden" style="background-color: rgba(0, 0, 0, 0.8);">
+    <div class="flex items-center justify-center min-h-screen p-4">
+      <div class="relative rounded-xl shadow-2xl max-w-lg w-full animate-slideIn" style="background-color: var(--bg-secondary);">
+        <div class="px-6 py-5 border-b" style="border-color: var(--border-primary);">
+          <h3 class="text-xl font-bold flex items-center space-x-2" style="color: var(--text-primary);">
+            <Icon name="arrow-path" size={24} style="color: var(--accent-green);" />
+            <span>Reabastecer Stock</span>
+          </h3>
         </div>
 
-        <div class="bg-slate-50 p-4 rounded-xl mb-5">
-          <p class="text-sm text-slate-600 mb-1">SKU: <span id="reab-sku" class="font-mono font-bold text-slate-900"></span></p>
-          <p class="text-sm text-slate-600">Producto: <span id="reab-producto" class="font-semibold text-slate-900"></span></p>
-        </div>
-        
-        <div class="space-y-5">
-          <div>
-            <label class="block text-sm font-semibold text-slate-700 mb-2">
-              Cantidad a Agregar <span class="text-red-500">*</span>
-            </label>
-            <input
-              type="number"
-              name="cantidad"
-              required
-              min="1"
-              placeholder="Ej: 100"
-              class="w-full px-4 py-3 border-2 border-slate-300 rounded-xl focus:ring-2 focus:ring-green-500 focus:border-transparent transition-all duration-200 outline-none"
-            />
+        <form action="/api/stock/reabastecer" method="POST" class="p-6">
+          <input type="hidden" name="stock_id" id="reab-stock-id" />
+
+          <div class="p-4 rounded-lg mb-5" style="background-color: rgba(59, 130, 246, 0.1); border-left: 3px solid var(--accent-blue);">
+            <p class="text-sm" style="color: var(--text-primary);">
+              <strong>💡 Procedimiento Almacenado:</strong> Esta acción usa <code class="px-2 py-1 rounded font-mono" style="background-color: var(--bg-tertiary);">sp_reabastecer_stock()</code>
+            </p>
           </div>
 
-          <div>
-            <label class="block text-sm font-semibold text-slate-700 mb-2">
-              Nuevo Costo Unitario (Opcional)
-            </label>
-            <div class="relative">
-              <span class="absolute left-4 top-3 text-slate-500 font-semibold">$</span>
+          <div class="p-4 rounded-lg mb-5" style="background-color: var(--bg-tertiary);">
+            <p class="text-sm mb-1" style="color: var(--text-secondary);">SKU: <span id="reab-sku" class="font-mono font-bold" style="color: var(--text-primary);"></span></p>
+            <p class="text-sm" style="color: var(--text-secondary);">Producto: <span id="reab-producto" class="font-semibold" style="color: var(--text-primary);"></span></p>
+          </div>
+
+          <div class="space-y-4">
+            <div>
+              <label class="block text-sm font-semibold mb-2" style="color: var(--text-primary);">
+                Cantidad a Agregar <span style="color: var(--accent-red);">*</span>
+              </label>
               <input
                 type="number"
-                name="costo_unitario"
-                id="reab-precio"
-                min="0"
-                step="0.01"
-                placeholder="Dejar vacío para mantener precio actual"
-                class="w-full pl-8 pr-4 py-3 border-2 border-slate-300 rounded-xl focus:ring-2 focus:ring-green-500 focus:border-transparent transition-all duration-200 outline-none"
+                name="cantidad"
+                required
+                min="1"
+                placeholder="Ej: 100"
+                class="w-full px-4 py-3 rounded-lg transition-all outline-none"
+                style="background-color: var(--bg-tertiary); color: var(--text-primary); border: 1px solid var(--border-primary);"
               />
             </div>
-            <p class="mt-2 text-xs text-slate-500">Si especificas un costo, se actualizará el precio del SKU</p>
+
+            <div>
+              <label class="block text-sm font-semibold mb-2" style="color: var(--text-primary);">
+                Nuevo Costo Unitario (Opcional)
+              </label>
+              <div class="relative">
+                <span class="absolute left-4 top-3 font-semibold" style="color: var(--text-secondary);">$</span>
+                <input
+                  type="number"
+                  name="costo_unitario"
+                  id="reab-precio"
+                  min="0"
+                  step="0.01"
+                  placeholder="Dejar vacío para mantener precio actual"
+                  class="w-full pl-8 pr-4 py-3 rounded-lg transition-all outline-none"
+                  style="background-color: var(--bg-tertiary); color: var(--text-primary); border: 1px solid var(--border-primary);"
+                />
+              </div>
+              <p class="mt-2 text-xs" style="color: var(--text-muted);">Si especificas un costo, se actualizará el precio del SKU</p>
+            </div>
           </div>
-        </div>
-        
-        <div class="flex gap-3 mt-6">
-          <button
-            type="submit"
-            class="flex-1 bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white font-semibold py-3 px-4 rounded-xl shadow-lg hover:shadow-xl transition-all duration-200 transform hover:scale-105"
-          >
-            Reabastecer
-          </button>
-          <button
-            type="button"
-            onclick="document.getElementById('modal-reabastecer').classList.add('hidden')"
-            class="px-6 bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold py-3 rounded-xl transition-all duration-200"
-          >
-            Cancelar
-          </button>
-        </div>
-      </form>
+
+          <div class="flex gap-3 mt-6">
+            <button type="submit" class="btn-success flex-1">
+              Reabastecer
+            </button>
+            <button
+              type="button"
+              onclick="document.getElementById('modal-reabastecer').classList.add('hidden')"
+              class="btn-secondary px-6"
+            >
+              Cancelar
+            </button>
+          </div>
+        </form>
+      </div>
     </div>
   </div>
 
   <script is:inline>
-    // Definir funciones en el scope global explícitamente
     window.editar = function(stock_id, sku, producto_id, precio, cantidad) {
       document.getElementById('edit-stock-id').value = stock_id;
       document.getElementById('edit-sku').value = sku;
       document.getElementById('edit-producto').value = producto_id;
       document.getElementById('edit-precio').value = precio;
-      // No se edita cantidad aquí, solo con Reabastecer
       document.getElementById('modal-editar').classList.remove('hidden');
     }
 
@@ -541,18 +525,18 @@ const stockReservado = stock.reduce((sum, s) => sum + parseInt(s.cantidad_reserv
 
     window.cambiarEstado = async function(stock_id, nuevoEstado) {
       if (!confirm(`¿Estás seguro de ${nuevoEstado === 'activo' ? 'activar' : 'desactivar'} este SKU?`)) return;
-      
+
       try {
         const formData = new FormData();
         formData.append('_method', 'PATCH');
         formData.append('stock_id', stock_id);
         formData.append('estado', nuevoEstado);
-        
+
         const response = await fetch('/api/stock', {
           method: 'POST',
           body: formData
         });
-        
+
         if (response.ok) {
           location.reload();
         } else {
@@ -585,7 +569,7 @@ const stockReservado = stock.reduce((sum, s) => sum + parseInt(s.cantidad_reserv
 
         const url = new URL(response.url);
         const error = url.searchParams.get('error');
-        
+
         if (error) {
           alert('❌ Error: ' + decodeURIComponent(error));
           location.href = '/stock';
@@ -601,7 +585,6 @@ const stockReservado = stock.reduce((sum, s) => sum + parseInt(s.cantidad_reserv
       }
     }
 
-    // Cerrar modales con ESC
     document.addEventListener('keydown', (e) => {
       if (e.key === 'Escape') {
         document.getElementById('modal-crear').classList.add('hidden');
@@ -610,7 +593,6 @@ const stockReservado = stock.reduce((sum, s) => sum + parseInt(s.cantidad_reserv
       }
     });
 
-    // Cerrar modales al hacer clic fuera
     ['modal-crear', 'modal-editar', 'modal-reabastecer'].forEach(modalId => {
       const modal = document.getElementById(modalId);
       if (modal) {

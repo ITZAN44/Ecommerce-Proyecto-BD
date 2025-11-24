@@ -1,0 +1,279 @@
+---
+import TimelineItem from './TimelineItem.astro';
+import Icon from '../Icon.astro';
+import type { HistorialEstado } from '../../lib/types';
+
+interface Props {
+  pedidoId: number;
+  estadoActual?: string;
+  autoLoad?: boolean;
+}
+
+const { pedidoId, estadoActual = 'pendiente', autoLoad = true } = Astro.props;
+
+let timeline: HistorialEstado[] = [];
+let error = '';
+
+if (autoLoad) {
+  try {
+    const apiUrl = `${Astro.url.origin}/api/pedidos/timeline?pedido_id=${pedidoId}`;
+    const response = await fetch(apiUrl);
+
+    if (response.ok) {
+      const data = await response.json();
+      timeline = data.timeline || [];
+    } else {
+      const errorData = await response.json();
+      error = errorData.error || 'Error al cargar timeline';
+    }
+  } catch (e) {
+    error = 'Error de conexión al cargar timeline';
+    console.error('Error cargando timeline:', e);
+  }
+}
+---
+
+<div class="timeline-container" data-pedido-id={pedidoId}>
+  <!-- Header -->
+  <div class="timeline-header-section">
+    <div class="timeline-header-content">
+      <Icon name="clock" size={24} style="color: var(--accent-blue);" />
+      <h3 class="timeline-header-title">
+        Historial del Pedido #{pedidoId}
+      </h3>
+    </div>
+
+    {timeline.length > 0 && (
+      <span class="timeline-count-badge">
+        {timeline.length} {timeline.length === 1 ? 'cambio' : 'cambios'}
+      </span>
+    )}
+  </div>
+
+  <!-- Timeline Content -->
+  <div class="timeline-wrapper">
+    {error && (
+      <div class="timeline-error">
+        <Icon name="exclamation-triangle" size={20} />
+        <p>{error}</p>
+      </div>
+    )}
+
+    {!error && timeline.length === 0 && autoLoad && (
+      <div class="timeline-empty">
+        <Icon name="information-circle" size={32} style="color: var(--text-secondary);" />
+        <p>No hay historial de cambios para este pedido</p>
+        <p class="timeline-empty-hint">Los cambios de estado aparecerán aquí automáticamente</p>
+      </div>
+    )}
+
+    {!error && timeline.length > 0 && (
+      <div class="timeline-items">
+        {timeline.map((historial, index) => (
+          <TimelineItem
+            historial={historial}
+            isFirst={index === 0}
+            isLast={index === timeline.length - 1}
+            estadoActual={estadoActual}
+          />
+        ))}
+      </div>
+    )}
+
+    {!autoLoad && (
+      <div class="timeline-loading">
+        <p>Cargando timeline...</p>
+      </div>
+    )}
+  </div>
+
+  <!-- Footer con información adicional -->
+  {timeline.length > 0 && (
+    <div class="timeline-footer">
+      <div class="timeline-stats">
+        <div class="timeline-stat">
+          <Icon name="clock" size={16} />
+          <span>Creado: {new Date(timeline[0].fecha_cambio).toLocaleDateString('es-ES')}</span>
+        </div>
+        {timeline.length > 1 && (
+          <div class="timeline-stat">
+            <Icon name="arrow-path" size={16} />
+            <span>Última actualización: {new Date(timeline[timeline.length - 1].fecha_cambio).toLocaleDateString('es-ES')}</span>
+          </div>
+        )}
+      </div>
+    </div>
+  )}
+</div>
+
+<style>
+  .timeline-container {
+    background: var(--bg-secondary);
+    border: 1px solid var(--border-primary);
+    border-radius: 1rem;
+    overflow: hidden;
+  }
+
+  .timeline-header-section {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 1.25rem 1.5rem;
+    background: var(--bg-primary);
+    border-bottom: 1px solid var(--border-primary);
+  }
+
+  .timeline-header-content {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+  }
+
+  .timeline-header-title {
+    font-size: 1.125rem;
+    font-weight: 700;
+    color: var(--text-primary);
+    margin: 0;
+  }
+
+  .timeline-count-badge {
+    font-size: 0.875rem;
+    font-weight: 600;
+    padding: 0.375rem 0.75rem;
+    background: var(--accent-blue);
+    color: white;
+    border-radius: 9999px;
+  }
+
+  .timeline-wrapper {
+    padding: 1.5rem;
+    max-height: 600px;
+    overflow-y: auto;
+  }
+
+  .timeline-wrapper::-webkit-scrollbar {
+    width: 8px;
+  }
+
+  .timeline-wrapper::-webkit-scrollbar-track {
+    background: var(--bg-secondary);
+  }
+
+  .timeline-wrapper::-webkit-scrollbar-thumb {
+    background: var(--border-primary);
+    border-radius: 4px;
+  }
+
+  .timeline-wrapper::-webkit-scrollbar-thumb:hover {
+    background: var(--text-secondary);
+  }
+
+  .timeline-items {
+    position: relative;
+  }
+
+  .timeline-error {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 1rem;
+    background: rgba(239, 68, 68, 0.1);
+    border: 1px solid #ef4444;
+    border-radius: 0.5rem;
+    color: #ef4444;
+  }
+
+  .timeline-error p {
+    margin: 0;
+    font-weight: 500;
+  }
+
+  .timeline-empty {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 3rem 1.5rem;
+    text-align: center;
+    color: var(--text-secondary);
+  }
+
+  .timeline-empty p {
+    margin: 0.5rem 0 0 0;
+    font-weight: 500;
+  }
+
+  .timeline-empty-hint {
+    font-size: 0.875rem;
+    opacity: 0.7;
+  }
+
+  .timeline-loading {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    padding: 2rem;
+    color: var(--text-secondary);
+  }
+
+  .timeline-footer {
+    padding: 1rem 1.5rem;
+    background: var(--bg-tertiary);
+    border-top: 1px solid var(--border-primary);
+  }
+
+  .timeline-stats {
+    display: flex;
+    gap: 1.5rem;
+    flex-wrap: wrap;
+  }
+
+  .timeline-stat {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 0.875rem;
+    color: var(--text-secondary);
+  }
+
+  .timeline-stat span {
+    font-weight: 500;
+  }
+
+  @media (max-width: 768px) {
+    .timeline-header-section {
+      flex-direction: column;
+      align-items: flex-start;
+      gap: 0.75rem;
+    }
+
+    .timeline-wrapper {
+      max-height: 400px;
+      padding: 1rem;
+    }
+
+    .timeline-stats {
+      flex-direction: column;
+      gap: 0.75rem;
+    }
+  }
+</style>
+
+<script is:inline>
+  function reloadTimeline(pedidoId) {
+    const container = document.querySelector(`[data-pedido-id="${pedidoId}"]`);
+    if (!container) return;
+
+    fetch(`/api/pedidos/timeline?pedido_id=${pedidoId}`)
+      .then(res => res.json())
+      .then(data => {
+        if (data.timeline && data.timeline.length > 0) {
+          console.log('Timeline actualizado:', data);
+          window.location.reload();
+        }
+      })
+      .catch(err => console.error('Error recargando timeline:', err));
+  }
+
+  window.reloadTimeline = reloadTimeline;
+</script>

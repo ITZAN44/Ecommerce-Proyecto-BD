@@ -1,5 +1,6 @@
 ---
 import Layout from '../../layouts/Layout.astro';
+import Icon from '../../components/Icon.astro';
 import { query } from '../../lib/db';
 
 let pedidos: any[] = [];
@@ -8,7 +9,6 @@ let stockDisponible: any[] = [];
 let cupones: any[] = [];
 let error = '';
 
-// Capturar error de la URL
 const url = new URL(Astro.request.url);
 const urlError = url.searchParams.get('error');
 if (urlError) {
@@ -16,9 +16,8 @@ if (urlError) {
 }
 
 try {
-  // Obtener pedidos con información completa
   const resultPedidos = await query(`
-    SELECT 
+    SELECT
       p.pedido_id,
       p.cliente_id,
       p.direccion_envio_id,
@@ -44,9 +43,8 @@ try {
   `);
   pedidos = resultPedidos.rows;
 
-  // Obtener clientes con sus direcciones
   const resultClientes = await query(`
-    SELECT 
+    SELECT
       c.cliente_id,
       c.nombre,
       c.apellido,
@@ -71,9 +69,8 @@ try {
   `);
   clientes = resultClientes.rows;
 
-  // Obtener stock disponible con productos
   const resultStock = await query(`
-    SELECT 
+    SELECT
       s.stock_id,
       s.sku,
       s.precio_unitario,
@@ -91,9 +88,8 @@ try {
   `);
   stockDisponible = resultStock.rows;
 
-  // Obtener cupones activos
   const resultCupones = await query(`
-    SELECT 
+    SELECT
       cupon_id,
       codigo_cupon,
       tipo_descuento,
@@ -124,130 +120,158 @@ const totalVentas = pedidos
 ---
 
 <Layout title="Pedidos">
-  <div class="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-slate-50 py-8">
-    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-      
+  <div class="min-h-screen py-8 px-4 sm:px-6 lg:px-8" style="background-color: var(--bg-primary);">
+    <div class="max-w-7xl mx-auto">
+
       <!-- Header -->
       <div class="mb-8">
         <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-          <div>
-            <h1 class="text-4xl font-bold bg-gradient-to-r from-blue-600 to-cyan-600 bg-clip-text text-transparent flex items-center gap-3">
-              <span class="text-4xl">📋</span> Pedidos
-            </h1>
-            <p class="mt-2 text-slate-600">Gestiona los pedidos del e-commerce</p>
+          <div class="flex items-center gap-4">
+            <Icon name="shopping-bag" size={40} style="color: var(--accent-blue);" />
+            <div>
+              <h1 class="text-4xl font-bold" style="color: var(--text-primary);">Pedidos</h1>
+              <p class="mt-1" style="color: var(--text-secondary);">Gestiona los pedidos del e-commerce</p>
+            </div>
           </div>
           <button
             onclick="document.getElementById('modal-crear').classList.remove('hidden')"
-            class="inline-flex items-center px-6 py-3 bg-gradient-to-r from-blue-600 to-cyan-600 hover:from-blue-700 hover:to-cyan-700 text-white font-semibold rounded-xl shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-200"
+            class="btn-primary inline-flex items-center gap-2"
           >
-            <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
-            </svg>
+            <Icon name="plus" size={20} />
             Crear Pedido
           </button>
         </div>
       </div>
 
       {error && (
-        <div class="mb-6 bg-red-50 border-l-4 border-red-500 p-4 rounded-lg">
-          <div class="flex items-center">
-            <svg class="w-5 h-5 text-red-500 mr-2" fill="currentColor" viewBox="0 0 20 20">
-              <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd"/>
-            </svg>
-            <p class="text-red-700 font-medium">{error}</p>
+        <div class="mb-6 p-4 rounded-lg" style="background-color: rgba(239, 68, 68, 0.1); border-left: 4px solid var(--accent-red);">
+          <div class="flex items-center gap-2">
+            <Icon name="x-circle" size={20} style="color: var(--accent-red);" />
+            <p class="font-medium" style="color: var(--accent-red);">{error}</p>
           </div>
         </div>
       )}
 
       <!-- Stats Cards -->
       <div class="grid grid-cols-1 md:grid-cols-6 gap-4 mb-8">
-        <div class="bg-gradient-to-br from-yellow-500 to-yellow-600 rounded-2xl p-4 text-white shadow-xl transform hover:scale-105 transition-all duration-200">
-          <p class="text-yellow-100 text-xs font-medium">Pendientes</p>
-          <p class="text-3xl font-bold mt-1">{pendientes}</p>
+        <div class="card">
+          <div class="flex items-center justify-between">
+            <div>
+              <p class="text-xs font-medium mb-1" style="color: var(--text-muted);">Pendientes</p>
+              <p class="text-3xl font-bold" style="color: var(--text-primary);">{pendientes}</p>
+            </div>
+            <Icon name="clock" size={32} style="color: var(--accent-yellow);" />
+          </div>
         </div>
 
-        <div class="bg-gradient-to-br from-green-600 to-green-700 rounded-2xl p-4 text-white shadow-xl transform hover:scale-105 transition-all duration-200">
-          <p class="text-green-100 text-xs font-medium">Pagados</p>
-          <p class="text-3xl font-bold mt-1">{pagados}</p>
+        <div class="card">
+          <div class="flex items-center justify-between">
+            <div>
+              <p class="text-xs font-medium mb-1" style="color: var(--text-muted);">Pagados</p>
+              <p class="text-3xl font-bold" style="color: var(--text-primary);">{pagados}</p>
+            </div>
+            <Icon name="check-circle" size={32} style="color: var(--accent-green);" />
+          </div>
         </div>
 
-        <div class="bg-gradient-to-br from-blue-600 to-blue-700 rounded-2xl p-4 text-white shadow-xl transform hover:scale-105 transition-all duration-200">
-          <p class="text-blue-100 text-xs font-medium">Enviados</p>
-          <p class="text-3xl font-bold mt-1">{enviados}</p>
+        <div class="card">
+          <div class="flex items-center justify-between">
+            <div>
+              <p class="text-xs font-medium mb-1" style="color: var(--text-muted);">Enviados</p>
+              <p class="text-3xl font-bold" style="color: var(--text-primary);">{enviados}</p>
+            </div>
+            <Icon name="truck" size={32} style="color: var(--accent-blue);" />
+          </div>
         </div>
 
-        <div class="bg-gradient-to-br from-purple-600 to-purple-700 rounded-2xl p-4 text-white shadow-xl transform hover:scale-105 transition-all duration-200">
-          <p class="text-purple-100 text-xs font-medium">Completados</p>
-          <p class="text-3xl font-bold mt-1">{completados}</p>
+        <div class="card">
+          <div class="flex items-center justify-between">
+            <div>
+              <p class="text-xs font-medium mb-1" style="color: var(--text-muted);">Completados</p>
+              <p class="text-3xl font-bold" style="color: var(--text-primary);">{completados}</p>
+            </div>
+            <Icon name="check-badge" size={32} style="color: var(--accent-purple);" />
+          </div>
         </div>
 
-        <div class="bg-gradient-to-br from-red-600 to-red-700 rounded-2xl p-4 text-white shadow-xl transform hover:scale-105 transition-all duration-200">
-          <p class="text-red-100 text-xs font-medium">Cancelados</p>
-          <p class="text-3xl font-bold mt-1">{cancelados}</p>
+        <div class="card">
+          <div class="flex items-center justify-between">
+            <div>
+              <p class="text-xs font-medium mb-1" style="color: var(--text-muted);">Cancelados</p>
+              <p class="text-3xl font-bold" style="color: var(--text-primary);">{cancelados}</p>
+            </div>
+            <Icon name="x-circle" size={32} style="color: var(--accent-red);" />
+          </div>
         </div>
 
-        <div class="bg-gradient-to-br from-cyan-600 to-cyan-700 rounded-2xl p-4 text-white shadow-xl transform hover:scale-105 transition-all duration-200">
-          <p class="text-cyan-100 text-xs font-medium">Total Ventas</p>
-          <p class="text-2xl font-bold mt-1">${totalVentas.toFixed(2)}</p>
+        <div class="card">
+          <div class="flex items-center justify-between">
+            <div>
+              <p class="text-xs font-medium mb-1" style="color: var(--text-muted);">Total Ventas</p>
+              <p class="text-2xl font-bold" style="color: var(--text-primary);">${totalVentas.toFixed(2)}</p>
+            </div>
+            <Icon name="currency-dollar" size={32} style="color: var(--accent-green);" />
+          </div>
         </div>
       </div>
 
       <!-- Tabla de Pedidos -->
-      <div class="bg-white rounded-2xl shadow-xl overflow-hidden border border-slate-200">
+      <div class="card overflow-hidden">
         <div class="overflow-x-auto">
-          <table class="min-w-full divide-y divide-slate-200">
-            <thead class="bg-gradient-to-r from-slate-50 to-slate-100">
+          <table class="min-w-full divide-y" style="border-color: var(--border-color);">
+            <thead style="background-color: var(--bg-tertiary);">
               <tr>
-                <th class="px-6 py-4 text-left text-xs font-bold text-slate-700 uppercase tracking-wider">Pedido #</th>
-                <th class="px-6 py-4 text-left text-xs font-bold text-slate-700 uppercase tracking-wider">Cliente</th>
-                <th class="px-6 py-4 text-left text-xs font-bold text-slate-700 uppercase tracking-wider">Dirección</th>
-                <th class="px-6 py-4 text-right text-xs font-bold text-slate-700 uppercase tracking-wider">Total</th>
-                <th class="px-6 py-4 text-center text-xs font-bold text-slate-700 uppercase tracking-wider">Estado</th>
-                <th class="px-6 py-4 text-center text-xs font-bold text-slate-700 uppercase tracking-wider">Fecha</th>
-                <th class="px-6 py-4 text-center text-xs font-bold text-slate-700 uppercase tracking-wider">Cupón</th>
-                <th class="px-6 py-4 text-right text-xs font-bold text-slate-700 uppercase tracking-wider">Acciones</th>
+                <th class="px-6 py-4 text-left text-xs font-bold uppercase tracking-wider" style="color: var(--text-primary);">Pedido #</th>
+                <th class="px-6 py-4 text-left text-xs font-bold uppercase tracking-wider" style="color: var(--text-primary);">Cliente</th>
+                <th class="px-6 py-4 text-left text-xs font-bold uppercase tracking-wider" style="color: var(--text-primary);">Dirección</th>
+                <th class="px-6 py-4 text-right text-xs font-bold uppercase tracking-wider" style="color: var(--text-primary);">Total</th>
+                <th class="px-6 py-4 text-center text-xs font-bold uppercase tracking-wider" style="color: var(--text-primary);">Estado</th>
+                <th class="px-6 py-4 text-center text-xs font-bold uppercase tracking-wider" style="color: var(--text-primary);">Fecha</th>
+                <th class="px-6 py-4 text-center text-xs font-bold uppercase tracking-wider" style="color: var(--text-primary);">Cupón</th>
+                <th class="px-6 py-4 text-right text-xs font-bold uppercase tracking-wider" style="color: var(--text-primary);">Acciones</th>
               </tr>
             </thead>
-            <tbody class="bg-white divide-y divide-slate-200">
+            <tbody class="divide-y" style="background-color: var(--bg-secondary); border-color: var(--border-color);">ar(--bg-secondary); border-color: var(--border-color);">
               {pedidos.map((pedido) => (
-                <tr class="hover:bg-slate-50 transition-colors duration-150">
+                <tr class="transition-colors duration-150" onmouseover="this.style.backgroundColor='var(--bg-tertiary)'" onmouseout="this.style.backgroundColor=''">
                   <td class="px-6 py-4">
                     <div class="flex items-center gap-2">
-                      <div class="shrink-0 h-10 w-10 bg-gradient-to-br from-blue-500 to-cyan-600 rounded-full flex items-center justify-center shadow-md">
+                      <div class="shrink-0 h-10 w-10 rounded-full flex items-center justify-center shadow-md" style="background-color: var(--accent-blue);">
                         <span class="text-white font-bold text-sm">#{pedido.pedido_id}</span>
                       </div>
                     </div>
                   </td>
                   <td class="px-6 py-4">
                     <div>
-                      <div class="text-sm font-bold text-slate-900">{pedido.nombre} {pedido.apellido}</div>
-                      <div class="text-xs text-slate-500">{pedido.email}</div>
+                      <div class="text-sm font-bold" style="color: var(--text-primary);">{pedido.nombre} {pedido.apellido}</div>
+                      <div class="text-xs" style="color: var(--text-muted);">{pedido.email}</div>
                     </div>
                   </td>
                   <td class="px-6 py-4">
-                    <div class="text-sm text-slate-700">{pedido.ciudad}, {pedido.pais}</div>
-                    <div class="text-xs text-slate-500">{pedido.direccion_linea_1}</div>
+                    <div class="text-sm" style="color: var(--text-secondary);">{pedido.ciudad}, {pedido.pais}</div>
+                    <div class="text-xs" style="color: var(--text-muted);">{pedido.direccion_linea_1}</div>
                   </td>
                   <td class="px-6 py-4 text-right">
                     <div>
-                      <span class="text-lg font-bold text-blue-600">${parseFloat(pedido.total_pedido).toFixed(2)}</span>
+                      <span class="text-lg font-bold" style="color: var(--accent-blue);">${parseFloat(pedido.total_pedido).toFixed(2)}</span>
                       {parseFloat(pedido.descuento_aplicado) > 0 && (
-                        <div class="text-xs text-green-600">-${parseFloat(pedido.descuento_aplicado).toFixed(2)}</div>
+                        <div class="text-xs" style="color: var(--accent-green);">-${parseFloat(pedido.descuento_aplicado).toFixed(2)}</div>
                       )}
                     </div>
                   </td>
                   <td class="px-6 py-4 text-center">
-                    <span class={`inline-flex px-3 py-1 text-xs font-bold rounded-full ${
-                      pedido.estado_pedido === 'completado' ? 'bg-purple-100 text-purple-800' :
-                      pedido.estado_pedido === 'enviado' ? 'bg-blue-100 text-blue-800' :
-                      pedido.estado_pedido === 'pagado' ? 'bg-green-100 text-green-800' :
-                      pedido.estado_pedido === 'cancelado' ? 'bg-red-100 text-red-800' :
-                      'bg-yellow-100 text-yellow-800'
+                    <span class={`inline-flex items-center gap-1.5 px-3 py-1 text-xs font-bold rounded-full ${
+                      pedido.estado_pedido === 'completado' ? 'bg-purple-500/10 text-purple-400 border border-purple-500/30' :
+                      pedido.estado_pedido === 'enviado' ? 'bg-blue-500/10 text-blue-400 border border-blue-500/30' :
+                      pedido.estado_pedido === 'pagado' ? 'bg-green-500/10 text-green-400 border border-green-500/30' :
+                      pedido.estado_pedido === 'cancelado' ? 'bg-red-500/10 text-red-400 border border-red-500/30' :
+                      'bg-yellow-500/10 text-yellow-400 border border-yellow-500/30'
                     }`}>
+                      <Icon name={pedido.estado_pedido === 'completado' ? 'check-badge' : pedido.estado_pedido === 'enviado' ? 'truck' : pedido.estado_pedido === 'pagado' ? 'check-circle' : pedido.estado_pedido === 'cancelado' ? 'x-circle' : 'clock'} size={14} />
                       {pedido.estado_pedido}
                     </span>
                   </td>
-                  <td class="px-6 py-4 text-center text-sm text-slate-600">
+                  <td class="px-6 py-4 text-center text-sm" style="color: var(--text-secondary);">
                     {new Date(pedido.fecha_pedido).toLocaleDateString('es-ES', {
                       day: '2-digit',
                       month: 'short',
@@ -256,41 +280,62 @@ const totalVentas = pedidos
                   </td>
                   <td class="px-6 py-4 text-center">
                     {pedido.codigo_cupon ? (
-                      <span class="text-xs font-mono bg-amber-100 text-amber-800 px-2 py-1 rounded">{pedido.codigo_cupon}</span>
+                      <span class="text-xs font-mono px-2 py-1 rounded" style="background-color: rgba(245, 158, 11, 0.1); color: var(--accent-yellow); border: 1px solid rgba(245, 158, 11, 0.3);">{pedido.codigo_cupon}</span>
                     ) : (
-                      <span class="text-slate-400">-</span>
+                      <span style="color: var(--text-muted);">-</span>
                     )}
                   </td>
                   <td class="px-6 py-4 text-right">
                     <div class="flex gap-2 justify-end">
+                      <button
+                        data-pedido-id={pedido.pedido_id}
+                        data-estado={pedido.estado_pedido}
+                        data-action="ver-timeline"
+                        class="btn-action p-2 rounded-lg transition-all duration-200 hover:scale-110"
+                        style="color: var(--accent-blue);"
+                        onmouseover="this.style.backgroundColor='var(--bg-tertiary)'"
+                        onmouseout="this.style.backgroundColor=''"
+                        title="Ver Timeline"
+                      >
+                        <Icon name="clock" size={18} />
+                      </button>
                       {pedido.estado_pedido === 'pendiente' && !pedido.cupon_id && (
                         <button
                           data-pedido-id={pedido.pedido_id}
                           data-action="aplicar-cupon"
-                          class="btn-action text-amber-600 hover:text-amber-800 font-semibold hover:bg-amber-50 p-2 rounded-lg transition-colors"
+                          class="btn-action p-2 rounded-lg transition-all duration-200 hover:scale-110"
+                          style="color: var(--accent-yellow);"
+                          onmouseover="this.style.backgroundColor='var(--bg-tertiary)'"
+                          onmouseout="this.style.backgroundColor=''"
                           title="Aplicar Cupón"
                         >
-                          🎟️
+                          <Icon name="ticket" size={18} />
                         </button>
                       )}
                       {['pendiente', 'pagado'].includes(pedido.estado_pedido) && (
                         <button
                           data-pedido-id={pedido.pedido_id}
                           data-action="cancelar"
-                          class="btn-action text-red-600 hover:text-red-800 font-semibold hover:bg-red-50 p-2 rounded-lg transition-colors"
+                          class="btn-action p-2 rounded-lg transition-all duration-200 hover:scale-110"
+                          style="color: var(--accent-red);"
+                          onmouseover="this.style.backgroundColor='var(--bg-tertiary)'"
+                          onmouseout="this.style.backgroundColor=''"
                           title="Cancelar Pedido"
                         >
-                          ❌
+                          <Icon name="x-circle" size={18} />
                         </button>
                       )}
                       {pedido.estado_pedido === 'cancelado' && (
                         <button
                           data-pedido-id={pedido.pedido_id}
                           data-action="eliminar"
-                          class="btn-action text-rose-600 hover:text-rose-800 font-semibold hover:bg-rose-50 p-2 rounded-lg transition-colors"
+                          class="btn-action p-2 rounded-lg transition-all duration-200 hover:scale-110"
+                          style="color: var(--accent-red);"
+                          onmouseover="this.style.backgroundColor='var(--bg-tertiary)'"
+                          onmouseout="this.style.backgroundColor=''"
                           title="Eliminar Permanentemente"
                         >
-                          🗑️
+                          <Icon name="trash" size={18} />
                         </button>
                       )}
                     </div>
@@ -305,222 +350,263 @@ const totalVentas = pedidos
   </div>
 
   <!-- Modal Crear Pedido -->
-  <div id="modal-crear" class="hidden fixed inset-0 bg-black/60 backdrop-blur-sm overflow-y-auto h-full w-full z-50 flex items-center justify-center p-4">
-    <div class="relative bg-white rounded-2xl shadow-2xl max-w-4xl w-full animate-slideIn">
-      <div class="bg-gradient-to-r from-blue-600 to-cyan-600 rounded-t-2xl px-6 py-5">
-        <h3 class="text-2xl font-bold text-white flex items-center gap-2">
-          <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
-          </svg>
-          Crear Nuevo Pedido
-        </h3>
-      </div>
-      
-      <form action="/api/pedidos" method="POST" class="p-6" id="form-crear-pedido">
-        <div class="space-y-5">
-          <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+  <div id="modal-crear" class="fixed inset-0 overflow-y-auto h-full w-full z-50 hidden">
+    <div class="fixed inset-0" style="background-color: rgba(0, 0, 0, 0.8);"></div>
+    <div class="flex items-center justify-center min-h-screen p-4">
+      <div class="relative z-10 rounded-2xl shadow-2xl max-w-4xl w-full animate-slideIn" style="background-color: var(--bg-secondary);">
+        <div class="px-6 py-5 border-b" style="border-color: var(--border-color);">
+          <h3 class="text-2xl font-bold flex items-center gap-3" style="color: var(--text-primary);">
+            <Icon name="plus" size={28} />
+            Crear Nuevo Pedido
+          </h3>
+        </div>
+
+        <form action="/api/pedidos" method="POST" class="p-6" id="form-crear-pedido">
+          <div class="space-y-5">
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label class="block text-sm font-semibold mb-2" style="color: var(--text-primary);">
+                  Cliente <span style="color: var(--accent-red);">*</span>
+                </label>
+                <select
+                  name="cliente_id"
+                  id="select-cliente"
+                  required
+                  class="input"
+                >
+                  <option value="">Seleccionar cliente...</option>
+                  {clientes.map((cliente) => (
+                    <option value={cliente.cliente_id} data-direcciones={JSON.stringify(cliente.direcciones)}>
+                      {cliente.nombre} {cliente.apellido} ({cliente.email})
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div>
+                <label class="block text-sm font-semibold mb-2" style="color: var(--text-primary);">
+                  Dirección de Envío <span style="color: var(--accent-red);">*</span>
+                </label>
+                <select
+                  name="direccion_envio_id"
+                  id="select-direccion"
+                  required
+                  disabled
+                  class="input"
+                  style="opacity: 0.6;"
+                >
+                  <option value="">Primero seleccione un cliente</option>
+                </select>
+              </div>
+            </div>
+
             <div>
-              <label class="block text-sm font-semibold text-slate-700 mb-2">
-                Cliente <span class="text-red-500">*</span>
+              <label class="block text-sm font-semibold mb-2" style="color: var(--text-primary);">
+                Cupón (Opcional)
               </label>
               <select
-                name="cliente_id"
-                id="select-cliente"
-                required
-                class="w-full px-4 py-3 border-2 border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 outline-none"
+                name="cupon_id"
+                class="input"
               >
-                <option value="">Seleccionar cliente...</option>
-                {clientes.map((cliente) => (
-                  <option value={cliente.cliente_id} data-direcciones={JSON.stringify(cliente.direcciones)}>
-                    {cliente.nombre} {cliente.apellido} ({cliente.email})
+                <option value="">Sin cupón</option>
+                {cupones.map((cupon) => (
+                  <option value={cupon.cupon_id}>
+                    {cupon.codigo_cupon} - {cupon.tipo_descuento === 'porcentaje' ? `${cupon.valor_descuento}%` : `$${cupon.valor_descuento}`} OFF
                   </option>
                 ))}
               </select>
             </div>
 
             <div>
-              <label class="block text-sm font-semibold text-slate-700 mb-2">
-                Dirección de Envío <span class="text-red-500">*</span>
+              <label class="block text-sm font-semibold mb-2" style="color: var(--text-primary);">
+                Productos <span style="color: var(--accent-red);">*</span>
               </label>
-              <select
-                name="direccion_envio_id"
-                id="select-direccion"
-                required
-                disabled
-                class="w-full px-4 py-3 border-2 border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 outline-none disabled:bg-slate-100"
+              <div id="items-container" class="space-y-3">
+                <!-- Items se agregarán dinámicamente aquí -->
+              </div>
+              <button
+                type="button"
+                onclick="agregarItem()"
+                class="mt-3 font-semibold text-sm flex items-center gap-2 transition-all duration-200 hover:scale-105"
+                style="color: var(--accent-blue);"
               >
-                <option value="">Primero seleccione un cliente</option>
-              </select>
+                <Icon name="plus" size={20} />
+                Agregar Producto
+              </button>
+            </div>
+
+            <input type="hidden" name="items" id="items-json" />
+
+            <div class="border-l-4 p-3 rounded" style="background-color: var(--bg-tertiary); border-color: var(--accent-blue);">
+              <p class="text-sm flex items-start gap-2" style="color: var(--text-secondary);">
+                <Icon name="information-circle" size={16} />
+                El pedido se creará en estado "pendiente". Los totales (subtotal, impuestos, total) se calcularán automáticamente.
+              </p>
             </div>
           </div>
 
-          <div>
-            <label class="block text-sm font-semibold text-slate-700 mb-2">
-              Cupón (Opcional)
-            </label>
-            <select
-              name="cupon_id"
-              class="w-full px-4 py-3 border-2 border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 outline-none"
+          <div class="flex gap-3 mt-6">
+            <button
+              type="submit"
+              class="btn-primary flex-1"
             >
-              <option value="">Sin cupón</option>
-              {cupones.map((cupon) => (
-                <option value={cupon.cupon_id}>
-                  {cupon.codigo_cupon} - {cupon.tipo_descuento === 'porcentaje' ? `${cupon.valor_descuento}%` : `$${cupon.valor_descuento}`} OFF
-                </option>
-              ))}
-            </select>
-          </div>
-
-          <div>
-            <label class="block text-sm font-semibold text-slate-700 mb-2">
-              Productos <span class="text-red-500">*</span>
-            </label>
-            <div id="items-container" class="space-y-3">
-              <!-- Items se agregarán dinámicamente aquí -->
-            </div>
+              Crear Pedido
+            </button>
             <button
               type="button"
-              onclick="agregarItem()"
-              class="mt-3 text-blue-600 hover:text-blue-800 font-semibold text-sm flex items-center gap-2"
+              onclick="cerrarModalCrear()"
+              class="btn-secondary px-6"
             >
-              <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
-              </svg>
-              Agregar Producto
+              Cancelar
             </button>
           </div>
-
-          <input type="hidden" name="items" id="items-json" />
-
-          <div class="bg-blue-50 border-l-4 border-blue-500 p-3 rounded">
-            <p class="text-sm text-blue-800">
-              <svg class="w-4 h-4 inline mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
-              </svg>
-              El pedido se creará en estado "pendiente". Los totales (subtotal, impuestos, total) se calcularán automáticamente.
-            </p>
-          </div>
-        </div>
-        
-        <div class="flex gap-3 mt-6">
-          <button
-            type="submit"
-            class="flex-1 bg-gradient-to-r from-blue-600 to-cyan-600 hover:from-blue-700 hover:to-cyan-700 text-white font-semibold py-3 px-4 rounded-xl shadow-lg hover:shadow-xl transition-all duration-200 transform hover:scale-105"
-          >
-            Crear Pedido
-          </button>
-          <button
-            type="button"
-            onclick="cerrarModalCrear()"
-            class="px-6 bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold py-3 rounded-xl transition-all duration-200"
-          >
-            Cancelar
-          </button>
-        </div>
-      </form>
+        </form>
+      </div>
     </div>
   </div>
 
   <!-- Modal Aplicar Cupón -->
-  <div id="modal-cupon" class="hidden fixed inset-0 bg-black/60 backdrop-blur-sm overflow-y-auto h-full w-full z-50 flex items-center justify-center p-4">
-    <div class="relative bg-white rounded-2xl shadow-2xl max-w-md w-full animate-slideIn">
-      <div class="bg-gradient-to-r from-amber-500 to-amber-600 rounded-t-2xl px-6 py-5">
-        <h3 class="text-2xl font-bold text-white flex items-center gap-2">
-          🎟️ Aplicar Cupón
-        </h3>
-      </div>
-      
-      <form action="/api/pedidos" method="POST" class="p-6">
-        <input type="hidden" name="_method" value="PATCH" />
-        <input type="hidden" name="pedido_id" id="cupon-pedido-id" />
-        
-        <div class="space-y-4">
-          <div>
-            <label class="block text-sm font-semibold text-slate-700 mb-2">
-              Código del Cupón <span class="text-red-500">*</span>
-            </label>
-            <input
-              type="text"
-              name="codigo_cupon"
-              required
-              placeholder="Ej: VERANO20"
-              class="w-full px-4 py-3 border-2 border-slate-300 rounded-xl focus:ring-2 focus:ring-amber-500 focus:border-transparent transition-all duration-200 outline-none uppercase"
-            />
-          </div>
-        </div>
-        
-        <div class="flex gap-3 mt-6">
-          <button
-            type="submit"
-            class="flex-1 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-white font-semibold py-3 px-4 rounded-xl shadow-lg hover:shadow-xl transition-all duration-200 transform hover:scale-105"
-          >
+  <div id="modal-cupon" class="fixed inset-0 overflow-y-auto h-full w-full z-50 hidden">
+    <div class="fixed inset-0" style="background-color: rgba(0, 0, 0, 0.8);"></div>
+    <div class="flex items-center justify-center min-h-screen p-4">
+      <div class="relative z-10 rounded-2xl shadow-2xl max-w-md w-full animate-slideIn" style="background-color: var(--bg-secondary);">
+        <div class="px-6 py-5 border-b" style="border-color: var(--border-color);">
+          <h3 class="text-2xl font-bold flex items-center gap-3" style="color: var(--text-primary);">
+            <Icon name="ticket" size={28} />
             Aplicar Cupón
-          </button>
-          <button
-            type="button"
-            onclick="document.getElementById('modal-cupon').classList.add('hidden')"
-            class="px-6 bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold py-3 rounded-xl transition-all duration-200"
-          >
-            Cancelar
-          </button>
+          </h3>
         </div>
-      </form>
+
+        <form action="/api/pedidos" method="POST" class="p-6">
+          <input type="hidden" name="_method" value="PATCH" />
+          <input type="hidden" name="pedido_id" id="cupon-pedido-id" />
+
+          <div class="space-y-4">
+            <div>
+              <label class="block text-sm font-semibold mb-2" style="color: var(--text-primary);">
+                Código del Cupón <span style="color: var(--accent-red);">*</span>
+              </label>
+              <input
+                type="text"
+                name="codigo_cupon"
+                required
+                placeholder="Ej: VERANO20"
+                class="input uppercase"
+              />
+            </div>
+          </div>
+
+          <div class="flex gap-3 mt-6">
+            <button
+              type="submit"
+              class="flex-1 btn-primary"
+            >
+              Aplicar Cupón
+            </button>
+            <button
+              type="button"
+              onclick="document.getElementById('modal-cupon').classList.add('hidden')"
+              class="px-6 btn-secondary"
+            >
+              Cancelar
+            </button>
+          </div>
+        </form>
+      </div>
     </div>
   </div>
 
   <!-- Modal Cancelar Pedido -->
-  <div id="modal-cancelar" class="hidden fixed inset-0 bg-black/60 backdrop-blur-sm overflow-y-auto h-full w-full z-50 flex items-center justify-center p-4">
-    <div class="relative bg-white rounded-2xl shadow-2xl max-w-md w-full animate-slideIn">
-      <div class="bg-gradient-to-r from-red-600 to-red-700 rounded-t-2xl px-6 py-5">
-        <h3 class="text-2xl font-bold text-white flex items-center gap-2">
-          ❌ Cancelar Pedido
-        </h3>
-      </div>
-      
-      <form action="/api/pedidos" method="POST" class="p-6">
-        <input type="hidden" name="_method" value="DELETE" />
-        <input type="hidden" name="pedido_id" id="cancelar-pedido-id" />
-        
-        <div class="space-y-4">
-          <div>
-            <label class="block text-sm font-semibold text-slate-700 mb-2">
-              Motivo de la Cancelación <span class="text-red-500">*</span>
-            </label>
-            <textarea
-              name="motivo"
-              required
-              rows="4"
-              placeholder="Explique por qué se cancela este pedido..."
-              class="w-full px-4 py-3 border-2 border-slate-300 rounded-xl focus:ring-2 focus:ring-red-500 focus:border-transparent transition-all duration-200 outline-none resize-none"
-            ></textarea>
+  <div id="modal-cancelar" class="fixed inset-0 overflow-y-auto h-full w-full z-50 hidden">
+    <div class="fixed inset-0" style="background-color: rgba(0, 0, 0, 0.8);"></div>
+    <div class="flex items-center justify-center min-h-screen p-4">
+      <div class="relative z-10 rounded-2xl shadow-2xl max-w-md w-full animate-slideIn" style="background-color: var(--bg-secondary);">
+        <div class="px-6 py-5 border-b" style="border-color: var(--border-color);">
+          <h3 class="text-2xl font-bold flex items-center gap-3" style="color: var(--text-primary);">
+            <Icon name="x-circle" size={28} />
+            Cancelar Pedido
+          </h3>
+        </div>
+
+        <form action="/api/pedidos" method="POST" class="p-6">
+          <input type="hidden" name="_method" value="DELETE" />
+          <input type="hidden" name="pedido_id" id="cancelar-pedido-id" />
+
+          <div class="space-y-4">
+            <div>
+              <label class="block text-sm font-semibold mb-2" style="color: var(--text-primary);">
+                Motivo de la Cancelación <span style="color: var(--accent-red);">*</span>
+              </label>
+              <textarea
+                name="motivo"
+                required
+                rows="4"
+                placeholder="Explique por qué se cancela este pedido..."
+                class="input resize-none"
+              ></textarea>
+            </div>
+
+            <div class="border-l-4 p-3 rounded" style="background-color: rgba(220, 38, 38, 0.1); border-color: var(--accent-red);">
+              <p class="text-sm flex items-start gap-2" style="color: var(--accent-red);">
+                <Icon name="exclamation-triangle" size={16} />
+                Esta acción liberará el stock reservado y no se puede deshacer
+              </p>
+            </div>
           </div>
 
-          <div class="bg-red-50 border-l-4 border-red-500 p-3 rounded">
-            <p class="text-sm text-red-800">
-              <svg class="w-4 h-4 inline mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/>
-              </svg>
-              Esta acción liberará el stock reservado y no se puede deshacer
-            </p>
+          <div class="flex gap-3 mt-6">
+            <button
+              type="submit"
+              class="flex-1 btn-danger"
+            >
+              Confirmar Cancelación
+            </button>
+            <button
+              type="button"
+              onclick="document.getElementById('modal-cancelar').classList.add('hidden')"
+              class="px-6 btn-secondary"
+            >
+              Volver
+            </button>
           </div>
-        </div>
-        
-        <div class="flex gap-3 mt-6">
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal Timeline -->
+  <div id="modal-timeline" class="fixed inset-0 overflow-y-auto h-full w-full z-50 hidden">
+    <div class="fixed inset-0" style="background-color: rgba(0, 0, 0, 0.8);" onclick="cerrarTimeline()"></div>
+    <div class="flex items-center justify-center min-h-screen p-4">
+      <div class="relative z-10 rounded-2xl shadow-2xl max-w-3xl w-full animate-slideIn" style="background-color: var(--bg-secondary);">
+        <div class="px-6 py-5 border-b flex items-center justify-between" style="border-color: var(--border-color);">
+          <h3 id="timeline-titulo" class="text-2xl font-bold flex items-center gap-3" style="color: var(--text-primary);">
+            <Icon name="clock" size={28} style="color: var(--accent-blue);" />
+            Timeline del Pedido
+          </h3>
           <button
-            type="submit"
-            class="flex-1 bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800 text-white font-semibold py-3 px-4 rounded-xl shadow-lg hover:shadow-xl transition-all duration-200 transform hover:scale-105"
+            onclick="cerrarTimeline()"
+            class="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+            title="Cerrar"
           >
-            Confirmar Cancelación
+            <Icon name="x-mark" size={24} style="color: var(--text-secondary);" />
           </button>
+        </div>
+
+        <div id="timeline-content" class="p-6 max-h-[600px] overflow-y-auto">
+          <!-- El contenido del timeline se cargará aquí dinámicamente -->
+        </div>
+
+        <div class="px-6 py-4 border-t flex justify-end" style="border-color: var(--border-color);">
           <button
             type="button"
-            onclick="document.getElementById('modal-cancelar').classList.add('hidden')"
-            class="px-6 bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold py-3 rounded-xl transition-all duration-200"
+            onclick="cerrarTimeline()"
+            class="btn-secondary px-6"
           >
-            Volver
+            Cerrar
           </button>
         </div>
-      </form>
+      </div>
     </div>
   </div>
 
@@ -531,12 +617,12 @@ const totalVentas = pedidos
       const selectCliente = document.getElementById('select-cliente');
       const selectDireccion = document.getElementById('select-direccion');
       const selectedOption = selectCliente.options[selectCliente.selectedIndex];
-      
+
       if (selectedOption.value) {
         const direcciones = JSON.parse(selectedOption.getAttribute('data-direcciones'));
-        
+
         selectDireccion.innerHTML = '';
-        
+
         if (direcciones && direcciones.length > 0 && direcciones[0].direccion_id) {
           selectDireccion.innerHTML = '<option value="">Seleccionar dirección...</option>';
           direcciones.forEach(dir => {
@@ -557,25 +643,26 @@ const totalVentas = pedidos
       }
     }
 
-    // Agregar event listener para el select de cliente
     document.addEventListener('DOMContentLoaded', () => {
       const selectCliente = document.getElementById('select-cliente');
       if (selectCliente) {
         selectCliente.addEventListener('change', cargarDirecciones);
       }
 
-      // Agregar event listeners para botones de acciones
       document.querySelectorAll('.btn-action').forEach(btn => {
         btn.addEventListener('click', function() {
           const pedidoId = this.getAttribute('data-pedido-id');
           const action = this.getAttribute('data-action');
-          
+
           if (action === 'aplicar-cupon') {
             aplicarCupon(pedidoId);
           } else if (action === 'cancelar') {
             cancelarPedido(pedidoId);
           } else if (action === 'eliminar') {
             eliminarPedido(pedidoId);
+          } else if (action === 'ver-timeline') {
+            const estadoActual = this.getAttribute('data-estado');
+            verTimeline(pedidoId, estadoActual);
           }
         });
       });
@@ -584,29 +671,29 @@ const totalVentas = pedidos
     function agregarItem() {
       const container = document.getElementById('items-container');
       const itemId = itemCount++;
-      
+
       const itemDiv = document.createElement('div');
       itemDiv.className = 'flex gap-2 items-start';
       itemDiv.id = `item-${itemId}`;
       itemDiv.innerHTML = `
         <select id="stock-${itemId}" required class="flex-1 px-3 py-2 border-2 border-slate-300 rounded-lg text-sm">
           <option value="">Seleccionar producto...</option>
-          ${stockDisponible.map(s => 
+          ${stockDisponible.map(s =>
             `<option value="${s.stock_id}" data-precio="${s.precio_unitario}" data-disponible="${s.disponible}">
               ${s.nombre_producto} (SKU: ${s.sku}) - $${parseFloat(s.precio_unitario).toFixed(2)} - Disponible: ${s.disponible}
             </option>`
           ).join('')}
         </select>
-        <input type="number" id="cantidad-${itemId}" min="1" required placeholder="Cant." 
+        <input type="number" id="cantidad-${itemId}" min="1" required placeholder="Cant."
           class="w-24 px-3 py-2 border-2 border-slate-300 rounded-lg text-sm" />
-        <button type="button" onclick="eliminarItem(${itemId})" 
+        <button type="button" onclick="eliminarItem(${itemId})"
           class="text-red-600 hover:text-red-800 hover:bg-red-50 p-2 rounded-lg transition-colors">
           <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
           </svg>
         </button>
       `;
-      
+
       container.appendChild(itemDiv);
     }
 
@@ -653,7 +740,7 @@ const totalVentas = pedidos
 
         const url = new URL(response.url);
         const error = url.searchParams.get('error');
-        
+
         if (error) {
           alert('❌ Error: ' + decodeURIComponent(error));
           location.href = '/pedidos';
@@ -669,9 +756,112 @@ const totalVentas = pedidos
       }
     }
 
-    // Procesar formulario antes de enviar
+    async function verTimeline(pedidoId, estadoActual) {
+      const modal = document.getElementById('modal-timeline');
+      const contenido = document.getElementById('timeline-content');
+      const titulo = document.getElementById('timeline-titulo');
+
+      titulo.textContent = `Timeline del Pedido #${pedidoId}`;
+      contenido.innerHTML = '<div class="text-center py-8"><p class="text-gray-500">Cargando timeline...</p></div>';
+      modal.classList.remove('hidden');
+
+      try {
+        const response = await fetch(`/api/pedidos/timeline?pedido_id=${pedidoId}`);
+        const data = await response.json();
+
+        if (!response.ok || data.error) {
+          contenido.innerHTML = `
+            <div class="text-center py-8">
+              <p class="text-red-500">${data.error || 'Error al cargar timeline'}</p>
+            </div>
+          `;
+          return;
+        }
+
+        if (!data.timeline || data.timeline.length === 0) {
+          contenido.innerHTML = `
+            <div class="text-center py-8">
+              <p class="text-gray-500">No hay historial de cambios para este pedido</p>
+            </div>
+          `;
+          return;
+        }
+
+        renderTimeline(data.timeline, estadoActual);
+      } catch (error) {
+        console.error('Error cargando timeline:', error);
+        contenido.innerHTML = `
+          <div class="text-center py-8">
+            <p class="text-red-500">Error de conexión al cargar timeline</p>
+          </div>
+        `;
+      }
+    }
+
+    function renderTimeline(timeline, estadoActual) {
+      const contenido = document.getElementById('timeline-content');
+
+      const estadoConfig = {
+        pendiente: { color: '#f59e0b', label: 'Pendiente', icon: 'clock' },
+        pagado: { color: '#3b82f6', label: 'Pagado', icon: 'check-circle' },
+        enviado: { color: '#8b5cf6', label: 'Enviado', icon: 'truck' },
+        completado: { color: '#10b981', label: 'Completado', icon: 'check-badge' },
+        cancelado: { color: '#ef4444', label: 'Cancelado', icon: 'x-circle' }
+      };
+
+      const html = timeline.map((item, index) => {
+        const config = estadoConfig[item.estado_nuevo] || estadoConfig.pendiente;
+        const isFirst = index === 0;
+        const isLast = index === timeline.length - 1;
+        const fecha = new Date(item.fecha_cambio);
+        const fechaFormateada = fecha.toLocaleDateString('es-ES', { day: '2-digit', month: 'short', year: 'numeric' });
+        const horaFormateada = fecha.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' });
+
+        return `
+          <div class="relative pl-10 pb-8 ${isLast ? '' : 'border-l-2 border-gray-200 dark:border-gray-700'}" style="margin-left: 20px;">
+            ${!isFirst ? `<div class="absolute left-0 top-0 w-0.5 h-6 -ml-px" style="background: ${config.color};"></div>` : ''}
+            <div class="absolute left-0 top-6 w-10 h-10 rounded-full border-3 flex items-center justify-center -ml-5"
+                 style="background: ${config.color}20; border-color: ${config.color};">
+              <svg class="w-5 h-5" style="color: ${config.color};" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                ${getIconPath(config.icon)}
+              </svg>
+            </div>
+            <div class="ml-6 bg-gray-50 dark:bg-gray-800 p-4 rounded-lg border border-gray-200 dark:border-gray-700">
+              <div class="flex items-center justify-between mb-2">
+                <h4 class="font-bold" style="color: ${config.color};">${config.label}</h4>
+                <span class="text-xs px-2 py-1 rounded-full" style="background: ${config.color}20; color: ${config.color};">
+                  ${item.estado_anterior ? `${estadoConfig[item.estado_anterior]?.label || item.estado_anterior} → ${config.label}` : 'Inicio'}
+                </span>
+              </div>
+              <p class="text-sm text-gray-600 dark:text-gray-400 mb-1">
+                📅 ${fechaFormateada} a las ${horaFormateada}
+              </p>
+              ${item.usuario ? `<p class="text-sm text-gray-600 dark:text-gray-400 mb-1">👤 ${item.usuario}</p>` : ''}
+              ${item.comentario ? `<p class="text-sm italic mt-2 p-2 bg-blue-50 dark:bg-blue-900/20 rounded border-l-2 border-blue-500">${item.comentario}</p>` : ''}
+            </div>
+          </div>
+        `;
+      }).join('');
+
+      contenido.innerHTML = html;
+    }
+
+    function getIconPath(icon) {
+      const icons = {
+        'clock': '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>',
+        'check-circle': '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>',
+        'truck': '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16V6a1 1 0 00-1-1H4a1 1 0 00-1 1v10a1 1 0 001 1h1m8-1a1 1 0 01-1 1H9m4-1V8a1 1 0 011-1h2.586a1 1 0 01.707.293l3.414 3.414a1 1 0 01.293.707V16a1 1 0 01-1 1h-1m-6-1a1 1 0 001 1h1M5 17a2 2 0 104 0m-4 0a2 2 0 114 0m6 0a2 2 0 104 0m-4 0a2 2 0 114 0"/>',
+        'check-badge': '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4M7.835 4.697a3.42 3.42 0 001.946-.806 3.42 3.42 0 014.438 0 3.42 3.42 0 001.946.806 3.42 3.42 0 013.138 3.138 3.42 3.42 0 00.806 1.946 3.42 3.42 0 010 4.438 3.42 3.42 0 00-.806 1.946 3.42 3.42 0 01-3.138 3.138 3.42 3.42 0 00-1.946.806 3.42 3.42 0 01-4.438 0 3.42 3.42 0 00-1.946-.806 3.42 3.42 0 01-3.138-3.138 3.42 3.42 0 00-.806-1.946 3.42 3.42 0 010-4.438 3.42 3.42 0 00.806-1.946 3.42 3.42 0 013.138-3.138z"/>',
+        'x-circle': '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z"/>'
+      };
+      return icons[icon] || icons['clock'];
+    }
+
+    function cerrarTimeline() {
+      document.getElementById('modal-timeline').classList.add('hidden');
+    }
+
     document.getElementById('form-crear-pedido').addEventListener('submit', (e) => {
-      // Validar cliente
       const clienteId = document.getElementById('select-cliente').value;
       if (!clienteId) {
         e.preventDefault();
@@ -679,7 +869,6 @@ const totalVentas = pedidos
         return false;
       }
 
-      // Validar dirección
       const direccionId = document.getElementById('select-direccion').value;
       if (!direccionId) {
         e.preventDefault();
@@ -687,50 +876,46 @@ const totalVentas = pedidos
         return false;
       }
 
-      // Validar items
       const items = [];
       const container = document.getElementById('items-container');
       const itemDivs = container.querySelectorAll('[id^="item-"]');
-      
+
       itemDivs.forEach(div => {
         const id = div.id.split('-')[1];
         const stockSelect = document.getElementById(`stock-${id}`);
         const cantidadInput = document.getElementById(`cantidad-${id}`);
-        
+
         if (stockSelect.value && cantidadInput.value) {
           const disponible = parseInt(stockSelect.options[stockSelect.selectedIndex].getAttribute('data-disponible'));
           const cantidad = parseInt(cantidadInput.value);
-          
+
           if (cantidad > disponible) {
             e.preventDefault();
             alert(`La cantidad solicitada (${cantidad}) supera el stock disponible (${disponible})`);
             return false;
           }
-          
+
           items.push({
             stock_id: parseInt(stockSelect.value),
             cantidad: cantidad
           });
         }
       });
-      
+
       if (items.length === 0) {
         e.preventDefault();
         alert('Debe agregar al menos un producto al pedido');
         return false;
       }
-      
+
       document.getElementById('items-json').value = JSON.stringify(items);
     });
 
-    // Agregar primer item automáticamente
     window.addEventListener('load', () => {
       if (document.getElementById('modal-crear').classList.contains('hidden')) {
-        // Solo al abrir el modal
       }
     });
 
-    // Escuchar apertura del modal
     const observer = new MutationObserver((mutations) => {
       mutations.forEach((mutation) => {
         if (mutation.attributeName === 'class') {
@@ -747,17 +932,16 @@ const totalVentas = pedidos
       attributeFilter: ['class']
     });
 
-    // Cerrar modales con ESC
     document.addEventListener('keydown', (e) => {
       if (e.key === 'Escape') {
         document.getElementById('modal-crear').classList.add('hidden');
         document.getElementById('modal-cupon').classList.add('hidden');
         document.getElementById('modal-cancelar').classList.add('hidden');
+        document.getElementById('modal-timeline').classList.add('hidden');
       }
     });
 
-    // Cerrar modales al hacer clic fuera
-    ['modal-crear', 'modal-cupon', 'modal-cancelar'].forEach(modalId => {
+    ['modal-crear', 'modal-cupon', 'modal-cancelar', 'modal-timeline'].forEach(modalId => {
       const modal = document.getElementById(modalId);
       if (modal) {
         modal.addEventListener('click', (e) => {
