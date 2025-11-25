@@ -2,6 +2,7 @@
 import '../styles/global.css';
 import Icon from '../components/Icon.astro';
 
+// Layout base para todas las páginas
 interface Props {
   title: string;
   description?: string;
@@ -9,8 +10,10 @@ interface Props {
 
 const { title, description = 'Sistema de E-commerce con PostgreSQL' } = Astro.props;
 
+// Detectar ruta activa
 const currentPath = Astro.url.pathname;
 
+// Estructura de navegación con iconos
 const navItems = [
   { href: '/', label: 'Dashboard', icon: 'home' },
   { href: '/productos', label: 'Productos', icon: 'shopping-bag' },
@@ -33,43 +36,46 @@ const navItems = [
   <meta name="description" content={description}>
   <title>{title} | E-commerce BS2</title>
   <link rel="icon" type="image/svg+xml" href="/favicon.svg">
-  <script src="https:
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 </head>
 <body>
   <div class="flex h-screen overflow-hidden">
-
-    <aside id="sidebar" class="w-64 shrink-0 border-r transition-all duration-300 ease-in-out overflow-y-auto"
+    
+    <!-- Sidebar -->
+    <aside id="sidebar" class="w-64 flex-shrink-0 border-r transition-all duration-300 ease-in-out overflow-y-auto" 
            style="background-color: var(--bg-secondary); border-color: var(--border-primary);">
-
+      
+      <!-- Logo/Brand -->
       <div class="h-16 flex items-center justify-between px-6 border-b" style="border-color: var(--border-primary);">
         <a href="/" class="flex items-center space-x-3 group">
-          <div class="w-8 h-8 rounded-lg flex items-center justify-center transition-all"
+          <div class="w-8 h-8 rounded-lg flex items-center justify-center transition-all" 
                style="background-color: var(--accent-blue);">
             <Icon name="shopping-bag" class="text-white" size={20} />
           </div>
           <span class="text-lg font-bold" style="color: var(--text-primary);">E-commerce</span>
         </a>
-        <button id="sidebarToggle" class="lg:hidden p-1 rounded-md hover:bg-opacity-10"
+        <button id="sidebarToggle" class="lg:hidden p-1 rounded-md hover:bg-opacity-10" 
                 style="color: var(--text-secondary);">
           <Icon name="x-mark" size={20} />
         </button>
       </div>
 
+      <!-- Navigation -->
       <nav class="p-4 space-y-1">
         {navItems.map(item => {
-          const isActive = currentPath === item.href ||
+          const isActive = currentPath === item.href || 
                           (item.href !== '/' && currentPath.startsWith(item.href));
           return (
-            <a
+            <a 
               href={item.href}
               class={`flex items-center space-x-3 px-4 py-3 rounded-lg transition-all duration-200 group ${
                 isActive ? 'nav-item-active' : 'nav-item'
               }`}
             >
-              <Icon
-                name={item.icon}
-                size={20}
-                class={isActive ? 'text-white' : 'group-hover:scale-110 transition-transform'}
+              <Icon 
+                name={item.icon} 
+                size={20} 
+                class={isActive ? 'text-white' : 'group-hover:scale-110 transition-transform'} 
               />
               <span class="font-medium">{item.label}</span>
             </a>
@@ -77,6 +83,7 @@ const navItems = [
         })}
       </nav>
 
+      <!-- Footer del Sidebar -->
       <div class="absolute bottom-0 left-0 right-0 p-4 border-t" style="border-color: var(--border-primary);">
         <div class="flex items-center space-x-3 px-4 py-3 rounded-lg" style="background-color: var(--bg-tertiary);">
           <div class="w-8 h-8 rounded-full flex items-center justify-center" style="background-color: var(--accent-purple);">
@@ -90,18 +97,20 @@ const navItems = [
       </div>
     </aside>
 
+    <!-- Main Content Area -->
     <div class="flex-1 flex flex-col overflow-hidden">
-
-      <header class="h-16 border-b flex items-center justify-between px-6"
+      
+      <!-- Top Header -->
+      <header class="h-16 border-b flex items-center justify-between px-6" 
               style="background-color: var(--bg-secondary); border-color: var(--border-primary);">
         <div class="flex items-center space-x-4">
-          <button id="sidebarToggleMobile" class="lg:hidden p-2 rounded-lg hover:bg-opacity-10"
+          <button id="sidebarToggleMobile" class="lg:hidden p-2 rounded-lg hover:bg-opacity-10" 
                   style="color: var(--text-primary); background-color: var(--bg-tertiary);">
             <Icon name="bars-3" size={24} />
           </button>
           <h1 class="text-xl font-bold" style="color: var(--text-primary);">{title}</h1>
         </div>
-
+        
         <div class="flex items-center space-x-4">
           <div class="text-right hidden sm:block">
             <p class="text-sm font-medium" style="color: var(--text-primary);">Sistema E-commerce</p>
@@ -110,6 +119,7 @@ const navItems = [
         </div>
       </header>
 
+      <!-- Main Content -->
       <main class="flex-1 overflow-y-auto p-6" style="background-color: var(--bg-primary);">
         <div class="max-w-7xl mx-auto">
           <slot />
@@ -118,13 +128,14 @@ const navItems = [
     </div>
   </div>
 
+  <!-- Overlay para móvil -->
   <div id="sidebarOverlay" class="fixed inset-0 bg-black bg-opacity-50 z-40 lg:hidden hidden"></div>
 
   <style>
     .nav-item {
       color: var(--text-secondary);
     }
-
+    
     .nav-item:hover {
       background-color: var(--bg-tertiary);
       color: var(--text-primary);
@@ -139,6 +150,7 @@ const navItems = [
       background-color: var(--accent-blue-hover);
     }
 
+    /* Sidebar mobile */
     @media (max-width: 1024px) {
       #sidebar {
         position: fixed;
@@ -156,6 +168,7 @@ const navItems = [
   </style>
 
   <script is:inline>
+    // Toggle sidebar en móvil
     const sidebar = document.getElementById('sidebar');
     const overlay = document.getElementById('sidebarOverlay');
     const toggleBtn = document.getElementById('sidebarToggleMobile');
@@ -170,6 +183,7 @@ const navItems = [
     closeBtn?.addEventListener('click', toggleSidebar);
     overlay?.addEventListener('click', toggleSidebar);
 
+    // Cerrar sidebar al hacer click en un link (móvil)
     if (window.innerWidth < 1024) {
       document.querySelectorAll('#sidebar a').forEach(link => {
         link.addEventListener('click', () => {
