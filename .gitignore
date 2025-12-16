@@ -17,6 +17,11 @@ pnpm-debug.log*
 .env
 .env.production
 
+# Docker secrets (NUNCA commitear)
+secrets/
+*.secret
+*.key
+
 # macOS-specific files
 .DS_Store
 
