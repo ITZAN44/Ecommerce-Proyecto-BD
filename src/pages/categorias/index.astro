@@ -164,21 +164,26 @@ const inactivas = categorias.filter(c => c.estado === 'inactivo').length;
                     <td class="px-6 py-4">
                       <div class="flex justify-end gap-2">
                         <button
-                          onclick={`editarCategoria(${JSON.stringify(cat)})`}
-                          class="btn-action p-2 rounded-lg transition-all duration-200 hover:scale-110"
+                          type="button"
+                          class="btn-editar btn-action p-2 rounded-lg transition-all duration-200 hover:scale-110"
                           style="color: var(--accent-blue);"
                           onmouseover="this.style.backgroundColor='var(--bg-tertiary)'"
                           onmouseout="this.style.backgroundColor=''"
+                          data-cat-id={cat.categoria_id}
+                          data-cat-nombre={cat.nombre_categoria}
+                          data-cat-descripcion={cat.descripcion || ''}
                           title="Editar"
                         >
                           <Icon name="pencil" size={18} />
                         </button>
                         <button
-                          onclick={`cambiarEstado(${cat.categoria_id}, '${cat.estado === 'activo' ? 'inactivo' : 'activo'}')`}
-                          class="btn-action p-2 rounded-lg transition-all duration-200 hover:scale-110"
+                          type="button"
+                          class="btn-estado btn-action p-2 rounded-lg transition-all duration-200 hover:scale-110"
                           style={`color: ${cat.estado === 'activo' ? 'var(--accent-red)' : 'var(--accent-green)'};`}
                           onmouseover="this.style.backgroundColor='var(--bg-tertiary)'"
                           onmouseout="this.style.backgroundColor=''"
+                          data-id={cat.categoria_id}
+                          data-estado={cat.estado === 'activo' ? 'inactivo' : 'activo'}
                           title={cat.estado === 'activo' ? 'Desactivar' : 'Activar'}
                         >
                           <Icon name={cat.estado === 'activo' ? 'x-circle' : 'check-circle'} size={18} />
@@ -196,10 +201,10 @@ const inactivas = categorias.filter(c => c.estado === 'inactivo').length;
   </div>
 
   <!-- Modal Crear -->
-  <div id="modal-crear" class="hidden fixed inset-0 z-50 overflow-y-auto">
+  <div id="modal-crear" class="hidden fixed inset-0 z-[100] overflow-y-auto">
     <div class="fixed inset-0 bg-black bg-opacity-70 transition-opacity" onclick="document.getElementById('modal-crear').classList.add('hidden')"></div>
     <div class="flex min-h-full items-center justify-center p-4">
-      <div class="relative w-full max-w-lg transform overflow-hidden rounded-2xl p-6 shadow-2xl transition-all" style="background-color: var(--bg-secondary);">
+      <div class="relative w-full max-w-lg transform overflow-hidden rounded-2xl p-6 shadow-2xl transition-all z-[101]" style="background-color: var(--bg-secondary);">
         <div class="border-b pb-4 mb-6" style="border-color: var(--border-color);">
           <h3 class="text-2xl font-bold flex items-center gap-3" style="color: var(--text-primary);">
             <Icon name="tag" size={28} />
@@ -252,10 +257,10 @@ const inactivas = categorias.filter(c => c.estado === 'inactivo').length;
   </div>
 
   <!-- Modal Editar -->
-  <div id="modal-editar" class="hidden fixed inset-0 z-50 overflow-y-auto">
+  <div id="modal-editar" class="hidden fixed inset-0 z-[100] overflow-y-auto">
     <div class="fixed inset-0 bg-black bg-opacity-70 transition-opacity" onclick="document.getElementById('modal-editar').classList.add('hidden')"></div>
     <div class="flex min-h-full items-center justify-center p-4">
-      <div class="relative w-full max-w-lg transform overflow-hidden rounded-2xl p-6 shadow-2xl transition-all" style="background-color: var(--bg-secondary);">
+      <div class="relative w-full max-w-lg transform overflow-hidden rounded-2xl p-6 shadow-2xl transition-all z-[101]" style="background-color: var(--bg-secondary);">
         <div class="border-b pb-4 mb-6" style="border-color: var(--border-color);">
           <h3 class="text-2xl font-bold flex items-center gap-3" style="color: var(--text-primary);">
             <Icon name="pencil" size={28} />
@@ -272,98 +277,180 @@ const inactivas = categorias.filter(c => c.estado === 'inactivo').length;
               <label class="block text-sm font-semibold mb-2" style="color: var(--text-secondary);">
                 Nombre de la categoría <span style="color: var(--accent-red);">*</span>
               </label>
-            <input
-              type="text"
-              name="nombre_categoria"
-              id="edit-nombre"
-              required
-              class="input"
-            />
+              <input
+                type="text"
+                name="nombre_categoria"
+                id="edit-nombre"
+                required
+                class="input"
+              />
+            </div>
+
+            <div>
+              <label class="block text-sm font-semibold mb-2" style="color: var(--text-secondary);">
+                Descripción
+              </label>
+              <textarea
+                name="descripcion"
+                id="edit-descripcion"
+                rows="4"
+                class="input resize-none"
+              ></textarea>
+            </div>
           </div>
 
-          <div>
-            <label class="block text-sm font-semibold mb-2" style="color: var(--text-secondary);">
-              Descripción
-            </label>
-            <textarea
-              name="descripcion"
-              id="edit-descripcion"
-              rows="4"
-              class="input resize-none"
-            ></textarea>
+          <div class="flex gap-3 mt-6">
+            <button type="submit" class="flex-1 btn-primary">
+              Guardar Cambios
+            </button>
+            <button
+              type="button"
+              onclick="document.getElementById('modal-editar').classList.add('hidden')"
+              class="btn-secondary"
+            >
+              Cancelar
+            </button>
           </div>
-        </div>
-
-        <div class="flex gap-3 mt-6">
-          <button type="submit" class="flex-1 btn-primary">
-            Guardar Cambios
-          </button>
-          <button
-            type="button"
-            onclick="document.getElementById('modal-editar').classList.add('hidden')"
-            class="btn-secondary"
-          >
-            Cancelar
-          </button>
-        </div>
-      </form>
+        </form>
     </div>
   </div>
 
   <script is:inline>
-    function editarCategoria(cat) {
-      document.getElementById('edit-id').value = cat.categoria_id;
-      document.getElementById('edit-nombre').value = cat.nombre_categoria;
-      document.getElementById('edit-descripcion').value = cat.descripcion || '';
-      document.getElementById('modal-editar').classList.remove('hidden');
-    }
-
-    async function cambiarEstado(id, nuevoEstado) {
-      const mensaje = nuevoEstado === 'activo'
-        ? '¿Activar esta categoría?'
-        : '¿Desactivar esta categoría?';
-
-      if (!confirm(mensaje)) return;
-
-      try {
-        const response = await fetch('/api/categorias', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            _method: 'PATCH',
-            categoria_id: id,
-            estado: nuevoEstado
-          })
-        });
-
-        if (response.ok) {
-          window.location.reload();
-        } else {
-          alert('Error al cambiar el estado');
-        }
-      } catch (error) {
-        alert('Error: ' + error.message);
-      }
-    }
-
-    const modals = ['modal-crear', 'modal-editar'];
-    modals.forEach(modalId => {
-      const modal = document.getElementById(modalId);
-      if (modal) {
-        modal.addEventListener('click', function(e) {
-          if (e.target === this) {
-            this.classList.add('hidden');
+    document.addEventListener('DOMContentLoaded', function() {
+      console.log('✅ Script cargado');
+      
+      let procesando = false;
+      
+      // Event delegation para botones de editar (evita múltiples listeners)
+      document.body.addEventListener('click', function(e) {
+        const btnEditar = e.target.closest('.btn-editar');
+        if (btnEditar && !procesando) {
+          e.preventDefault();
+          e.stopPropagation();
+          e.stopImmediatePropagation();
+          
+          procesando = true;
+          
+          const id = btnEditar.getAttribute('data-cat-id');
+          const nombre = btnEditar.getAttribute('data-cat-nombre');
+          const descripcion = btnEditar.getAttribute('data-cat-descripcion');
+          
+          console.log('📝 Editar categoría:', { id, nombre, descripcion });
+          
+          const editId = document.getElementById('edit-id');
+          const editNombre = document.getElementById('edit-nombre');
+          const editDescripcion = document.getElementById('edit-descripcion');
+          const modalEditar = document.getElementById('modal-editar');
+          
+          if (editId && editNombre && editDescripcion && modalEditar) {
+            editId.value = id;
+            editNombre.value = nombre;
+            editDescripcion.value = descripcion;
+            
+            // Forzar la remoción de hidden y mostrar el modal
+            modalEditar.classList.remove('hidden');
+            
+            // Verificar y remover hidden nuevamente si es necesario
+            if (modalEditar.classList.contains('hidden')) {
+              modalEditar.className = modalEditar.className.replace('hidden', '');
+            }
+            
+            // Forzar display con !important mediante inline style
+            modalEditar.style.cssText = 'display: block !important; z-index: 9999 !important;';
+            
+            console.log('✅ Modal abierto');
+            console.log('Clases del modal:', modalEditar.className);
+            console.log('Tiene hidden?:', modalEditar.classList.contains('hidden'));
+            
+            // Test visual - hacer scroll al modal
+            modalEditar.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            
+            // Alert de prueba
+            alert('El modal debería estar visible ahora. ¿Lo ves?');
+          } else {
+            console.error('❌ No se encontraron los elementos del modal');
+            console.error({ editId, editNombre, editDescripcion, modalEditar });
           }
-        });
-      }
-    });
+          
+          setTimeout(function() { procesando = false; }, 300);
+          return false;
+        }
+        
+        // Event delegation para botones de estado
+        const btnEstado = e.target.closest('.btn-estado');
+        if (btnEstado && !procesando) {
+          e.preventDefault();
+          e.stopPropagation();
+          e.stopImmediatePropagation();
+          
+          procesando = true;
+          
+          const id = btnEstado.getAttribute('data-id');
+          const nuevoEstado = btnEstado.getAttribute('data-estado');
+          
+          const mensaje = nuevoEstado === 'activo'
+            ? '¿Activar esta categoría?'
+            : '¿Desactivar esta categoría?';
 
-    document.addEventListener('keydown', function(e) {
-      if (e.key === 'Escape') {
-        modals.forEach(modalId => {
-          document.getElementById(modalId)?.classList.add('hidden');
-        });
-      }
+          if (!confirm(mensaje)) {
+            procesando = false;
+            return false;
+          }
+
+          fetch('/api/categorias', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              _method: 'PATCH',
+              categoria_id: parseInt(id),
+              estado: nuevoEstado
+            })
+          })
+          .then(response => {
+            if (response.ok) {
+              window.location.reload();
+            } else {
+              alert('Error al cambiar el estado');
+              procesando = false;
+            }
+          })
+          .catch(error => {
+            alert('Error: ' + error.message);
+            procesando = false;
+          });
+          
+          return false;
+        }
+      }, true); // Usar capturing phase
+
+      // Cerrar modales al hacer clic fuera
+      ['modal-crear', 'modal-editar'].forEach(function(modalId) {
+        const modal = document.getElementById(modalId);
+        if (modal) {
+          modal.addEventListener('click', function(e) {
+            if (e.target === this) {
+              this.classList.add('hidden');
+              this.style.display = 'none';
+            }
+          });
+        }
+      });
+
+      // Cerrar modales con Escape
+      document.addEventListener('keydown', function(e) {
+        if (e.key === 'Escape') {
+          const modalCrear = document.getElementById('modal-crear');
+          const modalEditar = document.getElementById('modal-editar');
+          if (modalCrear) {
+            modalCrear.classList.add('hidden');
+            modalCrear.style.display = 'none';
+          }
+          if (modalEditar) {
+            modalEditar.classList.add('hidden');
+            modalEditar.style.display = 'none';
+          }
+        }
+      });
     });
   </script>
 </Layout>

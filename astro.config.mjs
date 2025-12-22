@@ -10,6 +10,10 @@ export default defineConfig({
   adapter: node({
     mode: 'standalone'
   }),
+  server: {
+    host: true, // Permite conexiones desde fuera del contenedor
+    port: 4321
+  },
   vite: {
     plugins: [tailwindcss()]
   }

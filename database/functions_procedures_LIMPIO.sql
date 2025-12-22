@@ -230,7 +230,7 @@ BEGIN
         'pendiente',
         0, 0, 0, 0
     ) RETURNING pedido_id INTO p_pedido_id;
-
+    -- Itera sobre cada item del pedido usando jsonb_array_elements
     FOR v_item IN SELECT * FROM jsonb_array_elements(p_items)
     LOOP
         v_stock_id := (v_item->>'stock_id')::INT;
@@ -645,7 +645,7 @@ BEGIN
 
     GET DIAGNOSTICS v_productos_afectados = ROW_COUNT;
 
-    RAISE NOTICE '% SKUs actualizados con ajuste del %% en categoría %',
+    RAISE NOTICE '% SKUs actualizados con ajuste del % porciento en categoría %',
         v_productos_afectados, p_porcentaje_ajuste, p_categoria_id;
 END;
 $$;
