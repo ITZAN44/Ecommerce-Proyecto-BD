@@ -17,7 +17,8 @@ services:
       - /var/run/docker.sock:/var/run/docker.sock
       # Binario de docker (para usar docker dentro de Jenkins)
       - /usr/bin/docker:/usr/bin/docker
-      # Kubectl para desplegar en K3s
+      # Binarios de K3s
+      - /usr/local/bin/k3s:/usr/local/bin/k3s
       - /usr/local/bin/kubectl:/usr/local/bin/kubectl
       # Configuración de K3s
       - /etc/rancher/k3s/k3s.yaml:/root/.kube/config
