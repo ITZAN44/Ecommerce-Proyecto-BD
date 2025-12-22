@@ -28,6 +28,8 @@ services:
       - /run/k3s/containerd/containerd.sock:/run/k3s/containerd/containerd.sock
     networks:
       - jenkins_network
+
+networks:
   jenkins_network:
     driver: bridge
 
