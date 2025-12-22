@@ -50,7 +50,7 @@ pipeline {
                 
                 echo '=== Importando a containerd de K3s ==='
                 sh """
-                    sudo k3s ctr images import /tmp/${IMAGE_NAME}-${IMAGE_TAG}.tar
+                    k3s ctr images import /tmp/${IMAGE_NAME}-${IMAGE_TAG}.tar
                 """
                 
                 echo '=== Limpiando archivo temporal ==='
@@ -60,7 +60,7 @@ pipeline {
                 
                 echo '=== Verificando imagen en K3s ==='
                 sh """
-                    sudo k3s ctr images ls | grep ${IMAGE_NAME}:${IMAGE_TAG}
+                    k3s ctr images ls | grep ${IMAGE_NAME}:${IMAGE_TAG}
                 """
             }
         }
@@ -69,14 +69,14 @@ pipeline {
             steps {
                 echo '=== Actualizando Deployment en Kubernetes ==='
                 sh """
-                    sudo kubectl set image deployment/${DEPLOYMENT_NAME} \
+                    kubectl set image deployment/${DEPLOYMENT_NAME} \
                         ${DEPLOYMENT_NAME}=docker.io/library/${IMAGE_NAME}:${IMAGE_TAG} \
                         -n ${K8S_NAMESPACE}
                 """
                 
                 echo '=== Anotando el deployment con el commit ==='
                 sh """
-                    sudo kubectl annotate deployment/${DEPLOYMENT_NAME} \
+                    kubectl annotate deployment/${DEPLOYMENT_NAME} \
                         kubernetes.io/change-cause="Jenkins build #${BUILD_NUMBER} - commit ${IMAGE_TAG}" \
                         -n ${K8S_NAMESPACE} --overwrite
                 """
@@ -87,7 +87,7 @@ pipeline {
             steps {
                 echo '=== Esperando a que el deployment se complete ==='
                 sh """
-                    sudo kubectl rollout status deployment/${DEPLOYMENT_NAME} \
+                    kubectl rollout status deployment/${DEPLOYMENT_NAME} \
                         -n ${K8S_NAMESPACE} \
                         --timeout=300s
                 """
@@ -98,7 +98,7 @@ pipeline {
             steps {
                 echo '=== Estado de los Pods ==='
                 sh """
-                    sudo kubectl get pods -n ${K8S_NAMESPACE} -l app=${DEPLOYMENT_NAME}
+                    kubectl get pods -n ${K8S_NAMESPACE} -l app=${DEPLOYMENT_NAME}
                 """
             }
         }
@@ -127,7 +127,7 @@ pipeline {
             steps {
                 echo '=== Historial de deployments ==='
                 sh """
-                    sudo kubectl rollout history deployment/${DEPLOYMENT_NAME} -n ${K8S_NAMESPACE}
+                    kubectl rollout history deployment/${DEPLOYMENT_NAME} -n ${K8S_NAMESPACE}
                 """
             }
         }
