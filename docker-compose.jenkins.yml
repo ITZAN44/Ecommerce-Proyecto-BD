@@ -7,7 +7,11 @@ services:
     restart: unless-stopped
     privileged: true
     user: root
-    network_mode: host  # Compartir red del host para acceder a K3s API en localhost:6443
+    ports:
+      - "8080:8080"  # Jenkins UI
+      - "50000:50000"  # Agentes Jenkins
+    environment:
+      - KUBECONFIG=/root/.kube/config
     volumes:
       # Datos de Jenkins persistentes
       - jenkins_home:/var/jenkins_home
@@ -18,12 +22,12 @@ services:
       # Binarios de K3s
       - /usr/local/bin/k3s:/usr/local/bin/k3s
       - /usr/local/bin/kubectl:/usr/local/bin/kubectl
-      # Configuración de K3s
-      - /etc/rancher/k3s/k3s.yaml:/root/.kube/config
+      # Configuración de K3s (modificada para usar IP del host)
+      - ./jenkins/kubeconfig:/root/.kube/config
       # Socket de containerd de K3s (necesario para k3s ctr commands)
       - /run/k3s/containerd/containerd.sock:/run/k3s/containerd/containerd.sock
-
-networks:
+    networks:
+      - jenkins_network
   jenkins_network:
     driver: bridge
 
