@@ -22,6 +22,8 @@ services:
       - /usr/local/bin/kubectl:/usr/local/bin/kubectl
       # Configuración de K3s
       - /etc/rancher/k3s/k3s.yaml:/root/.kube/config
+      # Socket de containerd de K3s (necesario para k3s ctr commands)
+      - /run/k3s/containerd/containerd.sock:/run/k3s/containerd/containerd.sock
     networks:
       - jenkins_network
 
