@@ -12,6 +12,8 @@ services:
       - "50000:50000"  # Agentes Jenkins
     environment:
       - KUBECONFIG=/root/.kube/config
+    extra_hosts:
+      - "host.docker.internal:host-gateway"  # Permite que Jenkins alcance el host
     volumes:
       # Datos de Jenkins persistentes
       - jenkins_home:/var/jenkins_home
