@@ -1,0 +1,99 @@
+# ================================================
+# Configuración de kube-prometheus-stack
+# Fecha: 24/12/2025
+# Propósito: Monitoring completo con Grafana + Prometheus
+# ================================================
+
+# Configuración de Grafana
+grafana:
+  # Configuración de acceso
+  adminPassword: "admin123"
+  
+  # Exponer con NodePort para acceso desde Windows
+  service:
+    type: NodePort
+    nodePort: 30080
+  
+  # Persistencia de datos (dashboards guardados)
+  persistence:
+    enabled: true
+    size: 5Gi
+    storageClassName: local-path  # K3s default storage class
+  
+  # Recursos asignados
+  resources:
+    limits:
+      cpu: 500m
+      memory: 512Mi
+    requests:
+      cpu: 250m
+      memory: 256Mi
+
+# Configuración de Prometheus
+prometheus:
+  prometheusSpec:
+    # Retención de métricas (15 días)
+    retention: 15d
+    
+    # Almacenamiento persistente
+    storageSpec:
+      volumeClaimTemplate:
+        spec:
+          storageClassName: local-path
+          accessModes: ["ReadWriteOnce"]
+          resources:
+            requests:
+              storage: 10Gi
+    
+    # Recursos asignados
+    resources:
+      limits:
+        cpu: 1000m
+        memory: 2Gi
+      requests:
+        cpu: 500m
+        memory: 1Gi
+    
+    # Scrape interval (cada cuánto recolecta métricas)
+    scrapeInterval: 30s
+    evaluationInterval: 30s
+
+# Configuración de AlertManager
+alertmanager:
+  alertmanagerSpec:
+    # Almacenamiento para alertas
+    storage:
+      volumeClaimTemplate:
+        spec:
+          storageClassName: local-path
+          accessModes: ["ReadWriteOnce"]
+          resources:
+            requests:
+              storage: 5Gi
+    
+    # Recursos asignados
+    resources:
+      limits:
+        cpu: 200m
+        memory: 256Mi
+      requests:
+        cpu: 100m
+        memory: 128Mi
+
+# Node Exporter (métricas de sistema)
+nodeExporter:
+  enabled: true
+
+# Kube State Metrics (métricas de K8s)
+kubeStateMetrics:
+  enabled: true
+
+# Prometheus Operator
+prometheusOperator:
+  resources:
+    limits:
+      cpu: 200m
+      memory: 256Mi
+    requests:
+      cpu: 100m
+      memory: 128Mi
