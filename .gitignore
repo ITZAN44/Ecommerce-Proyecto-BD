@@ -15,12 +15,19 @@ pnpm-debug.log*
 
 # environment variables
 .env
-.env.production
+.env.*
+!.env.example
 
 # Docker secrets (NUNCA commitear)
 secrets/
 *.secret
 *.key
+
+# agent tooling state
+.atl/
+
+# crash dumps / junk
+*.stackdump
 
 # macOS-specific files
 .DS_Store
