@@ -640,15 +640,89 @@ Con el CI/CD funcionando, puedes:
 
 ---
 
+## � Estado Post-Reboot (23/12/2025)
+
+### Recuperación y Sincronización de Jenkins
+
+**Contexto:** Después del reinicio de la VM (23/12/2025), Jenkins requirió sincronización con systemd para garantizar auto-start correcto.
+
+**Problema inicial:**
+- `jenkins-docker.service` mostraba estado "failed"
+- Contenedores Jenkins ya estaban corriendo (iniciados manualmente)
+- Conflicto: systemd intentaba iniciar contenedores ya existentes
+
+**Solución aplicada:**
+```bash
+# 1. Detener contenedores manuales
+docker compose -f docker-compose.jenkins.yml down
+
+# 2. Iniciar vía systemd (toma control del lifecycle)
+sudo systemctl start jenkins-docker.service
+
+# 3. Verificar estado
+sudo systemctl status jenkins-docker.service
+# Estado: active (exited) - correcto para servicio oneshot
+
+# 4. Verificar contenedores
+docker ps
+# jenkins_server (jenkins/jenkins:lts) - Running
+# jenkins_docker (docker:dind) - Running
+
+# 5. Test de acceso
+curl -I http://localhost:8080
+# HTTP/1.1 403 Forbidden (normal, requiere autenticación)
+```
+
+**Configuración systemd actual:**
+```ini
+# /etc/systemd/system/jenkins-docker.service
+[Unit]
+Description=Jenkins Docker Container
+After=docker.service k3s.service
+Requires=docker.service
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+WorkingDirectory=/home/clark/Ecommerce-Proyecto-BD
+ExecStart=/usr/bin/docker compose -f docker-compose.jenkins.yml up -d
+ExecStop=/usr/bin/docker compose -f docker-compose.jenkins.yml down
+
+[Install]
+WantedBy=multi-user.target
+```
+
+**Estado actual:**
+- ✅ Jenkins accessible en http://192.168.0.119:8080
+- ✅ Pipeline "ecommerce-k8s-deploy" funcional
+- ✅ Auto-start configurado (systemd enabled)
+- ✅ Contenedores gestionados por systemd
+- ✅ kubeconfig regenerado para acceso a K3s
+
+**Últimos builds:**
+- Build #9 (22/12/2025): ✅ SUCCESS - Deployment completo K3s
+- Post-reboot: Jenkins operacional sin re-builds necesarios
+
+**Verificación de conectividad K3s:**
+```bash
+# Desde contenedor Jenkins
+docker exec jenkins_server kubectl --kubeconfig=/var/jenkins_home/kubeconfig get pods -n ecommerce
+# STATUS: All Running
+```
+
+---
+
 ## 📚 Referencias
 
 - [Jenkins Pipeline Documentation](https://www.jenkins.io/doc/book/pipeline/)
 - [Kubernetes Deployments](https://kubernetes.io/docs/concepts/workloads/controllers/deployment/)
 - [K3s Documentation](https://docs.k3s.io/)
 - [Docker Build Best Practices](https://docs.docker.com/develop/dev-best-practices/)
+- [systemd Service Units](https://www.freedesktop.org/software/systemd/man/systemd.service.html)
 
 ---
 
 **Documentación creada:** Diciembre 22, 2025  
-**Última actualización:** Diciembre 22, 2025  
+**Última actualización:** Diciembre 23, 2025  
 **Autor:** Clark / Itzan Valdivia
+

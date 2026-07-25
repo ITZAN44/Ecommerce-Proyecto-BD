@@ -1,4 +1,4 @@
-# 🔧 Configuración de Jenkins
+![1766373404799](image/README/1766373404799.png)![1766373408762](image/README/1766373408762.png)# 🔧 Configuración de Jenkins
 
 Esta carpeta contiene archivos de configuración y scripts auxiliares para Jenkins.
 

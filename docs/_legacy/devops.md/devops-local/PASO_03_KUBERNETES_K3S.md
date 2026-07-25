@@ -265,9 +265,123 @@ k get events -n ecommerce --sort-by='.lastTimestamp' | tail -50
 
 ---
 
-## 13) Próximos pasos recomendados
+## 13) Recuperación Post-Reboot (23/12/2025)
 
-- **Paso 04 (CI/CD):** pipeline para build + push de imagen + rollout en K3s
+### Problema: K3s en crash loop tras reinicio de VM
+
+**Síntomas:**
+- K3s service en estado "activating" constante
+- Error: `auto-restart (Result: protocol)`
+- Aplicación inaccesible vía Nginx (502 Bad Gateway)
+
+**Diagnóstico:**
+```bash
+sudo journalctl -u k3s -n 100 --no-pager
+# Error: failed to create unix socket on /run/k3s/containerd/containerd.sock: is a directory
+```
+
+**Causa raíz:** El socket de containerd (`/run/k3s/containerd/containerd.sock`) se corrompió durante el reinicio, convirtiéndose en un directorio en lugar de un socket file.
+
+**Solución aplicada:**
+```bash
+# 1. Verificar tipo de archivo
+ls -la /run/k3s/containerd/containerd.sock
+# Resultado: drwxr-xr-x (directorio - incorrecto)
+
+# 2. Eliminar directorio corrupto
+sudo rm -rf /run/k3s/containerd/containerd.sock
+
+# 3. Reiniciar K3s (regenera el socket correctamente)
+sudo systemctl restart k3s
+
+# 4. Verificar que el socket sea tipo 's' (socket)
+ls -la /run/k3s/containerd/containerd.sock
+# Resultado: srwxr-xr-x (socket - correcto)
+
+# 5. Verificar estado del servicio
+sudo systemctl status k3s
+# Estado: active (running)
+```
+
+**Configuraciones adicionales después de la recuperación:**
+
+1. **Permisos de kubeconfig:**
+```bash
+sudo chmod 644 /etc/rancher/k3s/k3s.yaml
+```
+
+2. **Regenerar kubeconfig para Jenkins:**
+```bash
+sudo cat /etc/rancher/k3s/k3s.yaml > ~/Ecommerce-Proyecto-BD/jenkins/kubeconfig
+```
+
+3. **Actualizar Nginx para apuntar a K3s (no a Docker Compose):**
+```bash
+# Editar /etc/nginx/sites-enabled/ecommerce
+sudo nano /etc/nginx/sites-enabled/ecommerce
+
+# Cambiar línea 3:
+# ANTES: server localhost:4321;
+# DESPUÉS: server 10.43.7.181:80;
+
+# Verificar y recargar
+sudo nginx -t
+sudo systemctl reload nginx
+```
+
+4. **Limpiar contenedores Docker Compose antiguos:**
+```bash
+docker compose -f docker-compose.production.yml down
+```
+
+5. **Sincronizar Jenkins con systemd:**
+```bash
+# Detener contenedores manuales
+docker compose -f docker-compose.jenkins.yml down
+
+# Iniciar vía systemd
+sudo systemctl start jenkins-docker.service
+
+# Verificar estado
+sudo systemctl status jenkins-docker.service
+```
+
+**Verificación post-recuperación:**
+```bash
+# K3s nodes
+kubectl get nodes
+# clark-virtualbox   Ready   control-plane,master   5d3h   v1.33.6+k3s1
+
+# Pods en ecommerce namespace
+kubectl get pods -n ecommerce
+# ecommerce-app-557d667469-pqpms   1/1     Running   1          43h
+# ecommerce-app-557d667469-rwmq9   1/1     Running   1          43h
+# postgres-7cb6d868b-clgmz         1/1     Running   2          5d3h
+
+# Services
+kubectl get svc -n ecommerce
+# ecommerce-app   ClusterIP   10.43.7.181     <none>        80/TCP       5d3h
+# postgres        ClusterIP   10.43.205.184   <none>        5432/TCP     5d3h
+
+# Test API vía Nginx
+curl http://localhost/api/analytics/dashboard
+# {"total_pedidos_hoy":0,"total_pedidos_pendientes":0,...}
+```
+
+**Estado final del stack:**
+- ✅ K3s: Running (3 pods saludables)
+- ✅ Nginx: Proxying a K3s (puerto 80)
+- ✅ Jenkins: Gestionado por systemd (auto-start)
+- ✅ Contenedores viejos: Eliminados
+- ✅ Aplicación: Accesible vía http://192.168.0.119
+
+**Lección aprendida:** Los sockets efímeros en `/run` pueden corromperse durante reinicios inesperados. Siempre verificar el tipo de archivo (`ls -la`) antes de asumir que el servicio está mal configurado.
+
+---
+
+## 14) Próximos pasos recomendados
+
+- **Paso 04 (CI/CD):** ✅ COMPLETADO - Pipeline Jenkins operacional
 - **Paso 05 (TLS):** HTTPS (Traefik + cert-manager / Let’s Encrypt)
 - **Paso 06 (Observabilidad):** Prometheus + Grafana + alertas
 - **Paso 07 (IaC):** Ansible para automatizar instalación/configuración

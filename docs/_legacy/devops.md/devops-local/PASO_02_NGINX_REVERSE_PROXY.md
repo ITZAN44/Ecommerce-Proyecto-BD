@@ -1,8 +1,8 @@
 # 🔀 PASO 2: NGINX COMO REVERSE PROXY
 
-**Fecha de implementación:** 18 de Diciembre, 2025  
-**Duración:** ~25 minutos  
-**Nivel:** DevOps Intermedio  
+**Fecha de implementación:** 18 de Diciembre, 2025
+**Duración:** ~25 minutos
+**Nivel:** DevOps Intermedio
 **Estado:** ✅ COMPLETADO CON ÉXITO
 
 ---
@@ -24,7 +24,7 @@
 
 ---
 
-## 🎯 OBJETIVO DEL PASO {#objetivo}
+## 🎯 OBJETIVO DEL PASO
 
 ### ¿Qué logramos?
 
@@ -51,7 +51,7 @@ En producción real, **NUNCA expones directamente** tu aplicación. Nginx actúa
 
 ---
 
-## ✅ PRERREQUISITOS {#prerrequisitos}
+## ✅ PRERREQUISITOS
 
 ### Estado Inicial (del Paso 1)
 
@@ -69,16 +69,16 @@ curl http://localhost:4321/api/analytics/dashboard
 
 ### Herramientas Necesarias
 
-| Herramienta | Versión | Verificación |
-|-------------|---------|--------------|
-| **Nginx** | 1.24.0+ | `nginx -v` |
-| **Docker** | 20.10+ | `docker --version` |
-| **UFW** | - | `sudo ufw status` |
-| **curl** | - | `curl --version` |
+| Herramienta      | Versión | Verificación        |
+| ---------------- | -------- | -------------------- |
+| **Nginx**  | 1.24.0+  | `nginx -v`         |
+| **Docker** | 20.10+   | `docker --version` |
+| **UFW**    | -        | `sudo ufw status`  |
+| **curl**   | -        | `curl --version`   |
 
 ---
 
-## 🧠 CONCEPTOS CLAVE DEVOPS {#conceptos}
+## 🧠 CONCEPTOS CLAVE DEVOPS
 
 ### 1. Reverse Proxy vs Forward Proxy
 
@@ -91,6 +91,7 @@ Servidor oculta sus backends usando proxy como gateway
 ```
 
 **Reverse Proxy** es lo que implementamos:
+
 ```
 Usuario → Nginx (192.168.0.119:80) → Docker (localhost:4321)
 ```
@@ -122,12 +123,14 @@ location / {
 ### 4. Headers HTTP
 
 **Sin Nginx:**
+
 ```http
 GET / HTTP/1.1
 Host: 192.168.0.119:4321
 ```
 
 **Con Nginx (headers adicionales):**
+
 ```http
 GET / HTTP/1.1
 Host: 192.168.0.119
@@ -138,7 +141,7 @@ X-Forwarded-Proto: http
 
 ---
 
-## 🏗️ ARQUITECTURA BEFORE/AFTER {#arquitectura}
+## 🏗️ ARQUITECTURA BEFORE/AFTER
 
 ### ANTES (Solo Docker - Paso 1)
 
@@ -223,7 +226,7 @@ X-Forwarded-Proto: http
 
 ---
 
-## 🚀 PROCESO DE IMPLEMENTACIÓN {#implementacion}
+## 🚀 PROCESO DE IMPLEMENTACIÓN
 
 ### Paso 2.1: Verificar Estado Inicial
 
@@ -247,6 +250,7 @@ curl http://localhost:4321/api/analytics/dashboard
 ```
 
 **Resultado:**
+
 ```
 ✅ Docker: active (running)
 ✅ PostgreSQL: Up 5 minutes (healthy)
@@ -254,7 +258,7 @@ curl http://localhost:4321/api/analytics/dashboard
 ✅ Datos cargados correctamente
 ```
 
-**Lección DevOps:** 
+**Lección DevOps:**
 Los contenedores con `restart: unless-stopped` **arrancan automáticamente** al reiniciar la VM. Esto es comportamiento de producción real.
 
 ---
@@ -284,6 +288,7 @@ nginx -v
 ```
 
 **Resultado:**
+
 ```bash
 nginx version: nginx/1.24.0 (Ubuntu)
 ● nginx.service - Active: active (running)
@@ -293,6 +298,7 @@ nginx version: nginx/1.24.0 (Ubuntu)
 
 **Lección DevOps:**
 Nginx es el servidor web #1 para reverse proxy en producción por su:
+
 - Alta performance (10K+ conexiones simultáneas)
 - Bajo consumo de memoria (~10MB en idle)
 - Configuración declarativa simple
@@ -321,21 +327,21 @@ upstream backend_app {
 server {
     listen 80;
     listen [::]:80;
-    
+  
     server_name ecommerce.local 192.168.0.119;
-    
+  
     # Logs
     access_log /var/log/nginx/ecommerce-access.log;
     error_log /var/log/nginx/ecommerce-error.log warn;
-    
+  
     # Client body size (para uploads)
     client_max_body_size 10M;
-    
+  
     # Timeouts
     proxy_connect_timeout 60s;
     proxy_send_timeout 60s;
     proxy_read_timeout 60s;
-    
+  
     # Compression
     gzip on;
     gzip_vary on;
@@ -345,12 +351,12 @@ server {
                application/json application/javascript application/xml+rss 
                application/rss+xml font/truetype font/opentype 
                application/vnd.ms-fontobject image/svg+xml;
-    
+  
     # Proxy to Docker container
     location / {
         proxy_pass http://backend_app;
         proxy_http_version 1.1;
-        
+      
         # Headers importantes
         proxy_set_header Host $host;
         proxy_set_header X-Real-IP $remote_addr;
@@ -358,32 +364,32 @@ server {
         proxy_set_header X-Forwarded-Proto $scheme;
         proxy_set_header X-Forwarded-Host $host;
         proxy_set_header X-Forwarded-Port $server_port;
-        
+      
         # WebSocket support (si lo usas en el futuro)
         proxy_set_header Upgrade $http_upgrade;
         proxy_set_header Connection 'upgrade';
         proxy_cache_bypass $http_upgrade;
-        
+      
         # Buffering
         proxy_buffering on;
         proxy_buffer_size 4k;
         proxy_buffers 8 4k;
     }
-    
+  
     # Cache para assets estáticos
     location ~* \.(jpg|jpeg|png|gif|ico|css|js|svg|woff|woff2|ttf|eot)$ {
         proxy_pass http://backend_app;
         proxy_http_version 1.1;
         proxy_set_header Host $host;
-        
+      
         # Cache por 1 año
         expires 1y;
         add_header Cache-Control "public, immutable";
-        
+      
         # Compresión
         gzip_static on;
     }
-    
+  
     # Health check endpoint
     location /health {
         access_log off;
@@ -396,6 +402,7 @@ server {
 **Guardar:** `Ctrl+O` → Enter → `Ctrl+X`
 
 **Validar sintaxis:**
+
 ```bash
 sudo nginx -t
 # nginx: the configuration file /etc/nginx/nginx.conf syntax is ok
@@ -433,6 +440,7 @@ sudo systemctl status nginx
 ```
 
 **Resultado:**
+
 ```
 dic 18 15:59:07 systemd[1]: Reloading nginx.service...
 dic 18 15:59:07 nginx[10071]: signal process started
@@ -440,6 +448,7 @@ dic 18 15:59:07 systemd[1]: Reloaded nginx.service
 ```
 
 **Lección DevOps:**
+
 - `reload` → Sin downtime (workers se recrean gradualmente)
 - `restart` → Downtime breve (todo se detiene y reinicia)
 
@@ -469,6 +478,7 @@ sudo ufw status numbered
 ```
 
 **Resultado:**
+
 ```
 Estado: activo
 
@@ -503,6 +513,7 @@ curl -I http://localhost
 ```
 
 **Resultado API:**
+
 ```json
 {
   "total_pedidos_hoy": 0,
@@ -517,6 +528,7 @@ curl -I http://localhost
 ```
 
 **Resultado Headers:**
+
 ```http
 HTTP/1.1 200 OK
 Server: nginx/1.24.0 (Ubuntu)
@@ -527,6 +539,7 @@ Vary: Accept-Encoding
 ```
 
 ✅ **Headers importantes:**
+
 - `Server: nginx` → Confirmación de que Nginx está respondiendo
 - `Vary: Accept-Encoding` → Compresión gzip configurada
 - `Connection: keep-alive` → Keepalive activo
@@ -534,6 +547,7 @@ Vary: Accept-Encoding
 #### Test 2: Desde Windows (navegador)
 
 **URL probada:**
+
 ```
 http://192.168.0.119
 ```
@@ -547,13 +561,14 @@ curl -H "Accept-Encoding: gzip" -I http://localhost
 ```
 
 **Esperado:**
+
 ```http
 Content-Encoding: gzip
 ```
 
 ---
 
-## ⚙️ CONFIGURACIÓN DETALLADA {#configuracion}
+## ⚙️ CONFIGURACIÓN DETALLADA
 
 ### Estructura de Archivos Nginx
 
@@ -588,6 +603,7 @@ upstream backend_app {
 ```
 
 **Beneficios:**
+
 - Reduce latencia (no reabre conexiones TCP)
 - Permite load balancing futuro
 - Mejora throughput en ~20-30%
@@ -603,12 +619,14 @@ gzip_types text/plain...;    # Tipos MIME a comprimir
 ```
 
 **Impacto real:**
+
 - HTML: ~70% reducción
 - CSS: ~80% reducción
 - JSON: ~60% reducción
 - JS: ~75% reducción
 
 **Ejemplo:**
+
 ```
 Sin gzip: index.html → 150 KB
 Con gzip: index.html → 45 KB (70% ahorro)
@@ -624,12 +642,14 @@ location ~* \.(jpg|jpeg|png|...)$ {
 ```
 
 **Headers resultantes:**
+
 ```http
 Cache-Control: public, immutable
 Expires: Fri, 18 Dec 2026 20:00:00 GMT
 ```
 
 **Beneficios:**
+
 - Navegador NO vuelve a pedir el archivo por 1 año
 - Reduce carga en servidor en ~80%
 - Mejora velocidad de carga para usuarios recurrentes
@@ -645,17 +665,20 @@ proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
 **¿Por qué son importantes?**
 
 Sin estos headers, tu app Astro solo vería:
+
 ```
 Request from: 127.0.0.1 (localhost)
 ```
 
 Con headers:
+
 ```
 Request from: 192.168.0.100 (IP real del cliente)
 X-Forwarded-For: 192.168.0.100, 192.168.0.119
 ```
 
 Esto es **CRÍTICO** para:
+
 - Analytics (saber de dónde vienen usuarios)
 - Rate limiting por IP
 - Geolocalización
@@ -663,7 +686,7 @@ Esto es **CRÍTICO** para:
 
 ---
 
-## 🧪 VALIDACIÓN Y TESTING {#testing}
+## 🧪 VALIDACIÓN Y TESTING
 
 ### Test Suite Completo
 
@@ -709,6 +732,7 @@ curl -I http://localhost | grep -E "(X-|Vary|Cache)"
 ```
 
 Expected:
+
 ```
 Vary: Accept-Encoding
 ```
@@ -740,28 +764,32 @@ wrk -t10 -c100 -d30s http://localhost/
 
 ---
 
-## 🔧 TROUBLESHOOTING {#troubleshooting}
+## 🔧 TROUBLESHOOTING
 
 ### Problema 1: Nginx no inicia
 
 **Síntoma:**
+
 ```bash
 sudo systemctl start nginx
 Job for nginx.service failed
 ```
 
 **Diagnóstico:**
+
 ```bash
 sudo nginx -t
 sudo journalctl -xeu nginx.service
 ```
 
 **Causas comunes:**
+
 1. Error de sintaxis en config
 2. Puerto 80 ya en uso
 3. Permisos incorrectos
 
 **Solución:**
+
 ```bash
 # Ver qué usa puerto 80
 sudo lsof -i :80
@@ -779,6 +807,7 @@ sudo systemctl start nginx
 ### Problema 2: 502 Bad Gateway
 
 **Síntoma:**
+
 ```
 HTTP/1.1 502 Bad Gateway
 ```
@@ -786,6 +815,7 @@ HTTP/1.1 502 Bad Gateway
 **Causa:** Nginx no puede conectar a backend (Docker).
 
 **Diagnóstico:**
+
 ```bash
 # Verificar que Docker está corriendo
 docker ps
@@ -798,6 +828,7 @@ curl http://localhost:4321
 ```
 
 **Solución:**
+
 ```bash
 # Levantar Docker si está caído
 cd ~/Ecommerce-Proyecto-BD
@@ -812,12 +843,14 @@ curl http://localhost:4321/api/analytics/dashboard
 ### Problema 3: Compresión no funciona
 
 **Síntoma:**
+
 ```bash
 curl -I http://localhost | grep "Content-Encoding"
 # (No aparece)
 ```
 
 **Diagnóstico:**
+
 ```bash
 # Ver configuración de gzip
 sudo nginx -T | grep gzip
@@ -841,6 +874,7 @@ gzip_types text/html text/plain text/css application/json;
 Desde Windows no carga, pero desde VM sí.
 
 **Diagnóstico:**
+
 ```bash
 # Ver reglas UFW
 sudo ufw status
@@ -850,6 +884,7 @@ sudo netstat -tlnp | grep :80
 ```
 
 **Solución:**
+
 ```bash
 # Permitir HTTP
 sudo ufw allow 80/tcp
@@ -863,7 +898,7 @@ sudo ufw status numbered
 
 ---
 
-## 📋 COMANDOS DE ADMINISTRACIÓN {#comandos}
+## 📋 COMANDOS DE ADMINISTRACIÓN
 
 ### Gestión del Servicio
 
@@ -952,7 +987,7 @@ sudo journalctl -u nginx -n 50
 
 ---
 
-## 📊 MÉTRICAS Y MONITOREO {#metricas}
+## 📊 MÉTRICAS Y MONITOREO
 
 ### Análisis de Logs
 
@@ -989,6 +1024,7 @@ sudo awk '{print $9}' /var/log/nginx/ecommerce-access.log | \
 ```
 
 Ejemplo de salida:
+
 ```
     850 200   # Exitosos
      45 304   # Not Modified (cache)
@@ -1019,11 +1055,13 @@ location /nginx_status {
 ```
 
 Luego:
+
 ```bash
 curl http://localhost/nginx_status
 ```
 
 Salida:
+
 ```
 Active connections: 5
 server accepts handled requests
@@ -1033,7 +1071,7 @@ Reading: 0 Writing: 2 Waiting: 3
 
 ---
 
-## ✨ MEJORES PRÁCTICAS {#best-practices}
+## ✨ MEJORES PRÁCTICAS
 
 ### 1. Seguridad
 
@@ -1111,19 +1149,149 @@ sudo tail -f /var/log/nginx/ecommerce-error.log
 
 ---
 
-## 🎯 PRÓXIMOS PASOS {#next-steps}
+## 🔄 Actualización Post-Migración a K3s (23/12/2025)
+
+### Contexto
+
+Después de implementar Kubernetes (Paso 03) y Jenkins (Paso 04), Nginx fue actualizado para apuntar al **ClusterIP de K3s** en lugar del contenedor Docker Compose directo.
+
+### Cambio de Configuración
+
+**Archivo:** `/etc/nginx/sites-enabled/ecommerce`
+
+**ANTES (apuntando a Docker Compose):**
+```nginx
+upstream backend_app {
+    server localhost:4321;  # ← Docker Compose directo
+    keepalive 32;
+}
+```
+
+**DESPUÉS (apuntando a K3s Service):**
+```nginx
+upstream backend_app {
+    server 10.43.7.181:80;  # ← K3s ClusterIP del service ecommerce-app
+    keepalive 32;
+}
+```
+
+### Razón del Cambio
+
+1. **Docker Compose reemplazado:** Los contenedores `ecommerce_app_prod` y `ecommerce_db_prod` fueron eliminados
+2. **K3s es ahora el orquestador:** La aplicación corre como Deployment en Kubernetes con 2 réplicas
+3. **Service ClusterIP estable:** `10.43.7.181` es la IP estable del Service que balancea entre los pods
+
+### Proceso de Actualización
+
+```bash
+# 1. Backup de configuración original
+sudo cp /etc/nginx/sites-enabled/ecommerce /etc/nginx/sites-enabled/ecommerce.backup
+
+# 2. Editar configuración
+sudo nano /etc/nginx/sites-enabled/ecommerce
+# Cambiar línea 3: server 10.43.7.181:80;
+
+# 3. Validar sintaxis
+sudo nginx -t
+# nginx: configuration file /etc/nginx/nginx.conf test is successful
+
+# 4. Recargar Nginx
+sudo systemctl reload nginx
+
+# 5. Verificar funcionamiento
+curl http://localhost/api/analytics/dashboard
+# {"total_pedidos_hoy":0,"total_pedidos_pendientes":0,...}
+```
+
+### Troubleshooting Común
+
+**Error:** `duplicate upstream "backend_app"`
+- **Causa:** Archivo `.backup` en `sites-enabled/` (Nginx carga TODO el directorio)
+- **Solución:** `sudo rm /etc/nginx/sites-enabled/ecommerce.backup`
+
+**Error:** `invalid port in upstream "localhost:10.43.7.181:80"`
+- **Causa:** Sintaxis incorrecta (no usar "localhost:" antes de la IP)
+- **Solución:** Usar solo `server 10.43.7.181:80;`
+
+### Arquitectura Actual (Post-K3s)
+
+```
+┌──────────────────────────────────────────────────────┐
+│                    CLIENTE                           │
+│              http://192.168.0.119                    │
+└─────────────────────┬────────────────────────────────┘
+                      │ Puerto 80
+                      ▼
+┌─────────────────────────────────────────────────────┐
+│                  NGINX (Reverse Proxy)               │
+│              Compresión + Cache + Logs               │
+└─────────────────────┬───────────────────────────────┘
+                      │ proxy_pass
+                      ▼
+┌─────────────────────────────────────────────────────┐
+│           K3S SERVICE: ecommerce-app                 │
+│              ClusterIP: 10.43.7.181:80               │
+└─────────────────────┬───────────────────────────────┘
+                      │ Load Balancer
+              ┌───────┴────────┐
+              ▼                ▼
+    ┌─────────────────┐  ┌─────────────────┐
+    │  POD Replica 1  │  │  POD Replica 2  │
+    │  ecommerce-app  │  │  ecommerce-app  │
+    │  Astro + Node   │  │  Astro + Node   │
+    └─────────┬───────┘  └─────────┬───────┘
+              │                    │
+              └──────────┬─────────┘
+                         ▼
+              ┌─────────────────────┐
+              │   POD: PostgreSQL   │
+              │    Service: 5432    │
+              └─────────────────────┘
+```
+
+### Estado Actual
+
+- ✅ **Nginx:** Activo en puerto 80, proxying a K3s
+- ✅ **K3s:** Service ClusterIP `10.43.7.181` con 2 pods backend
+- ✅ **Docker Compose:** Eliminado (solo Jenkins permanece)
+- ✅ **Aplicación:** Accesible vía `http://192.168.0.119`
+- ✅ **Compresión gzip:** Funcionando
+- ✅ **Logs:** Centralizados en Nginx
+
+### Comandos de Verificación
+
+```bash
+# Verificar IP del Service K3s
+kubectl get svc -n ecommerce ecommerce-app
+# ClusterIP: 10.43.7.181
+
+# Test directo a K3s (bypass Nginx)
+curl http://10.43.7.181/api/analytics/dashboard
+
+# Test vía Nginx
+curl http://localhost/api/analytics/dashboard
+
+# Logs de Nginx
+sudo tail -f /var/log/nginx/ecommerce-access.log
+```
+
+---
+
+## 🎯 PRÓXIMOS PASOS
 
 ### Opción A: SSL/TLS con Let's Encrypt (RECOMENDADO)
 
-**Tiempo:** ~30 minutos  
+**Tiempo:** ~30 minutos
 **Dificultad:** 🔥 Fácil
 
 **Beneficios:**
+
 - HTTPS gratis
 - Certificados renovables automáticamente
 - Mejora SEO y confianza del usuario
 
 **Preview:**
+
 ```bash
 sudo apt install certbot python3-certbot-nginx
 sudo certbot --nginx -d tudominio.com
@@ -1131,60 +1299,52 @@ sudo certbot --nginx -d tudominio.com
 
 ---
 
-### Opción B: Kubernetes (K3s)
+### Opción B: Kubernetes (K3s) ✅ COMPLETADO
 
-**Tiempo:** 2-3 horas  
+**Tiempo:** 2-3 horas
 **Dificultad:** 🔥🔥🔥 Avanzado
 
-**Beneficios:**
-- Orquestación profesional
-- Escalado automático
-- Self-healing
-- Rolling updates
+**Estado:** ✅ IMPLEMENTADO (18/12/2025)
 
-**Preview:**
-```bash
-curl -sfL https://get.k3s.io | sh -
-kubectl apply -f deployment.yaml
-```
+**Logros:**
+
+- ✅ K3s instalado y operacional
+- ✅ 2 réplicas de aplicación (HA)
+- ✅ PostgreSQL con storage persistente
+- ✅ Nginx integrado con K3s
+- ✅ Auto-healing configurado
 
 ---
 
-### Opción C: CI/CD con Jenkins
+### Opción C: CI/CD con Jenkins ✅ COMPLETADO
 
-**Tiempo:** 1-2 horas  
+**Tiempo:** 1-2 horas
 **Dificultad:** 🔥🔥 Intermedio
 
-**Beneficios:**
-- Deploy automático en git push
-- Testing automatizado
-- Rollback fácil
+**Estado:** ✅ IMPLEMENTADO (22/12/2025)
 
-**Preview:**
-```groovy
-pipeline {
-    agent any
-    stages {
-        stage('Build') { ... }
-        stage('Test') { ... }
-        stage('Deploy') { ... }
-    }
-}
-```
+**Logros:**
+
+- ✅ Jenkins containerizado con Docker-in-Docker
+- ✅ Pipeline automatizado (Poll SCM cada 2min)
+- ✅ Build #9 exitoso con deployment a K3s
+- ✅ Systemd service para auto-start
 
 ---
 
 ## 📈 RESUMEN DE LOGROS
 
-| Métrica | Antes (Solo Docker) | Después (Docker + Nginx) | Mejora |
-|---------|---------------------|--------------------------|--------|
-| **Puerto** | 4321 (no estándar) | 80 (HTTP estándar) | ✅ Profesional |
-| **Compresión** | No | Gzip activa | ⚡ ~70% reducción |
-| **Cache** | No | 1 año assets | ⚡ ~80% menos requests |
-| **Logs** | Solo Docker | Centralizados Nginx | 📊 Mejor análisis |
-| **Escalabilidad** | 1 instancia | Load balance ready | 🚀 Listo escalar |
-| **SSL** | No | Preparado | 🔒 Siguiente paso |
-| **Headers** | Básicos | Seguridad + Proxy | 🛡️ Más seguro |
+| Métrica                | Antes (Solo Docker) | Después (Docker + Nginx) | Con K3s (Actual)       |
+| ----------------------- | ------------------- | ------------------------- | ---------------------- |
+| **Puerto**        | 4321 (no estándar) | 80 (HTTP estándar)       | ✅ 80 (Nginx → K3s)   |
+| **Compresión**   | No                  | Gzip activa               | ✅ Gzip activa         |
+| **Cache**         | No                  | 1 año assets             | ✅ 1 año assets        |
+| **Logs**          | Solo Docker         | Centralizados Nginx       | ✅ Centralizados       |
+| **Escalabilidad** | 1 instancia         | Load balance ready        | ✅ 2 réplicas K3s     |
+| **SSL**           | No                  | Preparado                 | 🔜 Siguiente paso      |
+| **Headers**       | Básicos            | Seguridad + Proxy         | ✅ Configurados        |
+| **CI/CD**         | Manual              | Manual                    | ✅ Jenkins automatizado |
+| **Orquestación** | Docker Compose      | Docker Compose            | ✅ Kubernetes (K3s)    |
 
 ---
 
@@ -1193,6 +1353,7 @@ pipeline {
 ### 1. Nginx NO es solo un servidor web
 
 Es una **herramienta DevOps completa** que hace:
+
 - Reverse proxy
 - Load balancer
 - Cache server
@@ -1204,20 +1365,22 @@ Es una **herramienta DevOps completa** que hace:
 ### 2. El Reverse Proxy es la "puerta de entrada"
 
 En infraestructura moderna:
+
 ```
 Internet → Reverse Proxy → [App1, App2, App3, ...]
 ```
 
 TODO el tráfico pasa por ahí. Es el punto perfecto para:
+
 - Seguridad (filtrar ataques)
 - Observabilidad (logs, métricas)
 - Performance (cache, compresión)
 
 ### 3. Reload vs Restart
 
-| Comando | Downtime | Cuándo usar |
-|---------|----------|-------------|
-| `reload` | ❌ No | Cambios de config |
+| Comando     | Downtime       | Cuándo usar        |
+| ----------- | -------------- | ------------------- |
+| `reload`  | ❌ No          | Cambios de config   |
 | `restart` | ⚠️ Sí (~1s) | Problemas críticos |
 
 En producción: **SIEMPRE reload**.
@@ -1230,6 +1393,15 @@ sudo systemctl reload nginx
 ```
 
 Un error de sintaxis puede tumbar todo el sitio.
+
+### 5. Adaptabilidad del Proxy (Nueva lección)
+
+Nginx puede adaptarse sin cambios mayores cuando migras el backend:
+- **Docker Compose:** `server localhost:4321;`
+- **K3s Service:** `server 10.43.7.181:80;`
+- **Múltiples backends:** Solo agregar más líneas `server ...;`
+
+La configuración de compresión, cache, headers permanece **igual** independientemente del backend.
 
 ---
 
@@ -1259,23 +1431,27 @@ Un error de sintaxis puede tumbar todo el sitio.
 
 Antes de dar por completado este paso, verifica:
 
-- [ ] Nginx instalado y corriendo (`systemctl status nginx`)
-- [ ] Configuración creada en `/etc/nginx/sites-available/ecommerce`
-- [ ] Symlink creado en `/etc/nginx/sites-enabled/`
-- [ ] Sintaxis validada (`nginx -t`)
-- [ ] Servicio recargado sin errores
-- [ ] Firewall permite puerto 80 (`ufw status`)
-- [ ] App accesible desde VM (`curl http://localhost`)
-- [ ] App accesible desde Windows (`http://192.168.0.119`)
-- [ ] API responde correctamente
-- [ ] Compresión gzip funciona
-- [ ] Logs generándose en `/var/log/nginx/`
-- [ ] Health check responde (`/health`)
+- [x] Nginx instalado y corriendo (`systemctl status nginx`)
+- [x] Configuración creada en `/etc/nginx/sites-available/ecommerce`
+- [x] Symlink creado en `/etc/nginx/sites-enabled/`
+- [x] Sintaxis validada (`nginx -t`)
+- [x] Servicio recargado sin errores
+- [x] Firewall permite puerto 80 (`ufw status`)
+- [x] App accesible desde VM (`curl http://localhost`)
+- [x] App accesible desde Windows (`http://192.168.0.119`)
+- [x] API responde correctamente
+- [x] Compresión gzip funciona
+- [x] Logs generándose en `/var/log/nginx/`
+- [x] Health check responde (`/health`)
+- [x] **[NUEVO]** Configuración actualizada para K3s
+- [x] **[NUEVO]** Proxy funcional a ClusterIP de Kubernetes
+- [x] **[NUEVO]** Archivos backup eliminados de sites-enabled
 
 ---
 
 **FIN DEL PASO 2**
 
-*Documento generado el 18/12/2025*  
-*Autor: ITZAN44 con GitHub Copilot*  
-*Estado: ✅ VALIDADO EN PRODUCCIÓN*
+*Documento generado el 18/12/2025*
+*Última actualización: 23/12/2025*
+*Autor: ITZAN44 / Clark con GitHub Copilot*
+*Estado: ✅ VALIDADO EN PRODUCCIÓN (K3s + Jenkins)*

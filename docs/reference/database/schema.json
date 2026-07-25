@@ -1,0 +1,2421 @@
+{
+  "name": "ecommerce_db",
+  "tables": [
+    {
+      "name": "public.auditoria",
+      "type": "BASE TABLE",
+      "columns": [
+        {
+          "name": "auditoria_id",
+          "type": "integer",
+          "nullable": false,
+          "default": "nextval('auditoria_auditoria_id_seq'::regclass)"
+        },
+        {
+          "name": "tabla",
+          "type": "varchar(100)",
+          "nullable": false
+        },
+        {
+          "name": "operacion",
+          "type": "varchar(10)",
+          "nullable": false
+        },
+        {
+          "name": "registro_id",
+          "type": "integer",
+          "nullable": false
+        },
+        {
+          "name": "usuario",
+          "type": "varchar(100)",
+          "nullable": true
+        },
+        {
+          "name": "fecha",
+          "type": "timestamp without time zone",
+          "nullable": false,
+          "default": "now()"
+        },
+        {
+          "name": "datos_anteriores",
+          "type": "jsonb",
+          "nullable": true
+        },
+        {
+          "name": "datos_nuevos",
+          "type": "jsonb",
+          "nullable": true
+        },
+        {
+          "name": "ip_address",
+          "type": "varchar(45)",
+          "nullable": true
+        }
+      ],
+      "indexes": [
+        {
+          "name": "auditoria_pkey",
+          "def": "CREATE UNIQUE INDEX auditoria_pkey ON public.auditoria USING btree (auditoria_id)",
+          "table": "public.auditoria",
+          "columns": [
+            "auditoria_id"
+          ]
+        },
+        {
+          "name": "idx_auditoria_fecha",
+          "def": "CREATE INDEX idx_auditoria_fecha ON public.auditoria USING btree (fecha)",
+          "table": "public.auditoria",
+          "columns": [
+            "fecha"
+          ]
+        },
+        {
+          "name": "idx_auditoria_registro",
+          "def": "CREATE INDEX idx_auditoria_registro ON public.auditoria USING btree (registro_id)",
+          "table": "public.auditoria",
+          "columns": [
+            "registro_id"
+          ]
+        },
+        {
+          "name": "idx_auditoria_tabla",
+          "def": "CREATE INDEX idx_auditoria_tabla ON public.auditoria USING btree (tabla)",
+          "table": "public.auditoria",
+          "columns": [
+            "tabla"
+          ]
+        },
+        {
+          "name": "idx_auditoria_usuario",
+          "def": "CREATE INDEX idx_auditoria_usuario ON public.auditoria USING btree (usuario)",
+          "table": "public.auditoria",
+          "columns": [
+            "usuario"
+          ]
+        }
+      ],
+      "constraints": [
+        {
+          "name": "auditoria_operacion_check",
+          "type": "CHECK",
+          "def": "CHECK (((operacion)::text = ANY (ARRAY[('INSERT'::character varying)::text, ('UPDATE'::character varying)::text, ('DELETE'::character varying)::text])))",
+          "table": "public.auditoria",
+          "referenced_table": "",
+          "columns": [
+            "operacion"
+          ]
+        },
+        {
+          "name": "auditoria_pkey",
+          "type": "PRIMARY KEY",
+          "def": "PRIMARY KEY (auditoria_id)",
+          "table": "public.auditoria",
+          "referenced_table": "",
+          "columns": [
+            "auditoria_id"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "public.categorias",
+      "type": "BASE TABLE",
+      "columns": [
+        {
+          "name": "categoria_id",
+          "type": "integer",
+          "nullable": false,
+          "default": "nextval('categorias_categoria_id_seq'::regclass)"
+        },
+        {
+          "name": "nombre_categoria",
+          "type": "varchar(100)",
+          "nullable": false
+        },
+        {
+          "name": "descripcion",
+          "type": "text",
+          "nullable": true
+        },
+        {
+          "name": "estado",
+          "type": "varchar(20)",
+          "nullable": false,
+          "default": "'activo'::character varying"
+        },
+        {
+          "name": "fecha_creacion",
+          "type": "timestamp without time zone",
+          "nullable": false,
+          "default": "now()"
+        },
+        {
+          "name": "fecha_modificacion",
+          "type": "timestamp without time zone",
+          "nullable": true
+        }
+      ],
+      "indexes": [
+        {
+          "name": "categorias_nombre_categoria_key",
+          "def": "CREATE UNIQUE INDEX categorias_nombre_categoria_key ON public.categorias USING btree (nombre_categoria)",
+          "table": "public.categorias",
+          "columns": [
+            "nombre_categoria"
+          ]
+        },
+        {
+          "name": "categorias_pkey",
+          "def": "CREATE UNIQUE INDEX categorias_pkey ON public.categorias USING btree (categoria_id)",
+          "table": "public.categorias",
+          "columns": [
+            "categoria_id"
+          ]
+        }
+      ],
+      "constraints": [
+        {
+          "name": "categorias_estado_check",
+          "type": "CHECK",
+          "def": "CHECK (((estado)::text = ANY (ARRAY[('activo'::character varying)::text, ('inactivo'::character varying)::text])))",
+          "table": "public.categorias",
+          "referenced_table": "",
+          "columns": [
+            "estado"
+          ]
+        },
+        {
+          "name": "categorias_nombre_categoria_key",
+          "type": "UNIQUE",
+          "def": "UNIQUE (nombre_categoria)",
+          "table": "public.categorias",
+          "referenced_table": "",
+          "columns": [
+            "nombre_categoria"
+          ]
+        },
+        {
+          "name": "categorias_pkey",
+          "type": "PRIMARY KEY",
+          "def": "PRIMARY KEY (categoria_id)",
+          "table": "public.categorias",
+          "referenced_table": "",
+          "columns": [
+            "categoria_id"
+          ]
+        }
+      ],
+      "triggers": [
+        {
+          "name": "trg_auditoria_categorias",
+          "def": "CREATE TRIGGER trg_auditoria_categorias AFTER INSERT OR DELETE OR UPDATE ON public.categorias FOR EACH ROW EXECUTE FUNCTION fn_auditoria_categorias()"
+        },
+        {
+          "name": "trg_categorias_modificacion",
+          "def": "CREATE TRIGGER trg_categorias_modificacion BEFORE UPDATE ON public.categorias FOR EACH ROW EXECUTE FUNCTION fn_actualizar_fecha_modificacion()"
+        }
+      ]
+    },
+    {
+      "name": "public.clientes",
+      "type": "BASE TABLE",
+      "columns": [
+        {
+          "name": "cliente_id",
+          "type": "integer",
+          "nullable": false,
+          "default": "nextval('clientes_cliente_id_seq'::regclass)"
+        },
+        {
+          "name": "nombre",
+          "type": "varchar(100)",
+          "nullable": false
+        },
+        {
+          "name": "apellido",
+          "type": "varchar(100)",
+          "nullable": false
+        },
+        {
+          "name": "email",
+          "type": "varchar(255)",
+          "nullable": false
+        },
+        {
+          "name": "hash_contrasena",
+          "type": "varchar(255)",
+          "nullable": false
+        },
+        {
+          "name": "estado",
+          "type": "varchar(20)",
+          "nullable": false,
+          "default": "'activo'::character varying"
+        },
+        {
+          "name": "fecha_creacion",
+          "type": "timestamp without time zone",
+          "nullable": false,
+          "default": "now()"
+        },
+        {
+          "name": "fecha_modificacion",
+          "type": "timestamp without time zone",
+          "nullable": true
+        }
+      ],
+      "indexes": [
+        {
+          "name": "clientes_email_key",
+          "def": "CREATE UNIQUE INDEX clientes_email_key ON public.clientes USING btree (email)",
+          "table": "public.clientes",
+          "columns": [
+            "email"
+          ]
+        },
+        {
+          "name": "clientes_pkey",
+          "def": "CREATE UNIQUE INDEX clientes_pkey ON public.clientes USING btree (cliente_id)",
+          "table": "public.clientes",
+          "columns": [
+            "cliente_id"
+          ]
+        }
+      ],
+      "constraints": [
+        {
+          "name": "clientes_estado_check",
+          "type": "CHECK",
+          "def": "CHECK (((estado)::text = ANY (ARRAY[('activo'::character varying)::text, ('inactivo'::character varying)::text, ('suspendido'::character varying)::text])))",
+          "table": "public.clientes",
+          "referenced_table": "",
+          "columns": [
+            "estado"
+          ]
+        },
+        {
+          "name": "clientes_email_key",
+          "type": "UNIQUE",
+          "def": "UNIQUE (email)",
+          "table": "public.clientes",
+          "referenced_table": "",
+          "columns": [
+            "email"
+          ]
+        },
+        {
+          "name": "clientes_pkey",
+          "type": "PRIMARY KEY",
+          "def": "PRIMARY KEY (cliente_id)",
+          "table": "public.clientes",
+          "referenced_table": "",
+          "columns": [
+            "cliente_id"
+          ]
+        }
+      ],
+      "triggers": [
+        {
+          "name": "trg_auditoria_clientes",
+          "def": "CREATE TRIGGER trg_auditoria_clientes AFTER INSERT OR DELETE OR UPDATE ON public.clientes FOR EACH ROW EXECUTE FUNCTION fn_auditoria_clientes()"
+        },
+        {
+          "name": "trg_clientes_modificacion",
+          "def": "CREATE TRIGGER trg_clientes_modificacion BEFORE UPDATE ON public.clientes FOR EACH ROW EXECUTE FUNCTION fn_actualizar_fecha_modificacion()"
+        }
+      ]
+    },
+    {
+      "name": "public.cupones",
+      "type": "BASE TABLE",
+      "columns": [
+        {
+          "name": "cupon_id",
+          "type": "integer",
+          "nullable": false,
+          "default": "nextval('cupones_cupon_id_seq'::regclass)"
+        },
+        {
+          "name": "codigo_cupon",
+          "type": "varchar(50)",
+          "nullable": false
+        },
+        {
+          "name": "tipo_descuento",
+          "type": "varchar(20)",
+          "nullable": false
+        },
+        {
+          "name": "valor_descuento",
+          "type": "numeric(10,2)",
+          "nullable": false
+        },
+        {
+          "name": "fecha_expiracion",
+          "type": "date",
+          "nullable": true
+        },
+        {
+          "name": "usos_disponibles",
+          "type": "integer",
+          "nullable": true
+        },
+        {
+          "name": "estado",
+          "type": "varchar(20)",
+          "nullable": false,
+          "default": "'activo'::character varying"
+        },
+        {
+          "name": "fecha_creacion",
+          "type": "timestamp without time zone",
+          "nullable": false,
+          "default": "now()"
+        },
+        {
+          "name": "fecha_modificacion",
+          "type": "timestamp without time zone",
+          "nullable": true
+        }
+      ],
+      "indexes": [
+        {
+          "name": "cupones_codigo_cupon_key",
+          "def": "CREATE UNIQUE INDEX cupones_codigo_cupon_key ON public.cupones USING btree (codigo_cupon)",
+          "table": "public.cupones",
+          "columns": [
+            "codigo_cupon"
+          ]
+        },
+        {
+          "name": "cupones_pkey",
+          "def": "CREATE UNIQUE INDEX cupones_pkey ON public.cupones USING btree (cupon_id)",
+          "table": "public.cupones",
+          "columns": [
+            "cupon_id"
+          ]
+        },
+        {
+          "name": "idx_cupones_codigo",
+          "def": "CREATE INDEX idx_cupones_codigo ON public.cupones USING btree (codigo_cupon)",
+          "table": "public.cupones",
+          "columns": [
+            "codigo_cupon"
+          ]
+        }
+      ],
+      "constraints": [
+        {
+          "name": "cupones_estado_check",
+          "type": "CHECK",
+          "def": "CHECK (((estado)::text = ANY (ARRAY[('activo'::character varying)::text, ('inactivo'::character varying)::text, ('expirado'::character varying)::text])))",
+          "table": "public.cupones",
+          "referenced_table": "",
+          "columns": [
+            "estado"
+          ]
+        },
+        {
+          "name": "cupones_tipo_descuento_check",
+          "type": "CHECK",
+          "def": "CHECK (((tipo_descuento)::text = ANY (ARRAY[('porcentaje'::character varying)::text, ('fijo'::character varying)::text])))",
+          "table": "public.cupones",
+          "referenced_table": "",
+          "columns": [
+            "tipo_descuento"
+          ]
+        },
+        {
+          "name": "cupones_usos_disponibles_check",
+          "type": "CHECK",
+          "def": "CHECK ((usos_disponibles \u003e= 0))",
+          "table": "public.cupones",
+          "referenced_table": "",
+          "columns": [
+            "usos_disponibles"
+          ]
+        },
+        {
+          "name": "cupones_valor_descuento_check",
+          "type": "CHECK",
+          "def": "CHECK ((valor_descuento \u003e (0)::numeric))",
+          "table": "public.cupones",
+          "referenced_table": "",
+          "columns": [
+            "valor_descuento"
+          ]
+        },
+        {
+          "name": "cupones_codigo_cupon_key",
+          "type": "UNIQUE",
+          "def": "UNIQUE (codigo_cupon)",
+          "table": "public.cupones",
+          "referenced_table": "",
+          "columns": [
+            "codigo_cupon"
+          ]
+        },
+        {
+          "name": "cupones_pkey",
+          "type": "PRIMARY KEY",
+          "def": "PRIMARY KEY (cupon_id)",
+          "table": "public.cupones",
+          "referenced_table": "",
+          "columns": [
+            "cupon_id"
+          ]
+        }
+      ],
+      "triggers": [
+        {
+          "name": "trg_auditoria_cupones",
+          "def": "CREATE TRIGGER trg_auditoria_cupones AFTER INSERT OR DELETE OR UPDATE ON public.cupones FOR EACH ROW EXECUTE FUNCTION fn_auditoria_cupones()"
+        },
+        {
+          "name": "trg_cupones_modificacion",
+          "def": "CREATE TRIGGER trg_cupones_modificacion BEFORE UPDATE ON public.cupones FOR EACH ROW EXECUTE FUNCTION fn_actualizar_fecha_modificacion()"
+        }
+      ]
+    },
+    {
+      "name": "public.detalle_pedido",
+      "type": "BASE TABLE",
+      "columns": [
+        {
+          "name": "detalle_id",
+          "type": "integer",
+          "nullable": false,
+          "default": "nextval('detalle_pedido_detalle_id_seq'::regclass)"
+        },
+        {
+          "name": "pedido_id",
+          "type": "integer",
+          "nullable": false
+        },
+        {
+          "name": "stock_id",
+          "type": "integer",
+          "nullable": false
+        },
+        {
+          "name": "cantidad",
+          "type": "integer",
+          "nullable": false
+        },
+        {
+          "name": "precio_unitario_compra",
+          "type": "numeric(10,2)",
+          "nullable": false
+        },
+        {
+          "name": "fecha_creacion",
+          "type": "timestamp without time zone",
+          "nullable": false,
+          "default": "now()"
+        }
+      ],
+      "indexes": [
+        {
+          "name": "detalle_pedido_pkey",
+          "def": "CREATE UNIQUE INDEX detalle_pedido_pkey ON public.detalle_pedido USING btree (detalle_id)",
+          "table": "public.detalle_pedido",
+          "columns": [
+            "detalle_id"
+          ]
+        },
+        {
+          "name": "idx_detalle_pedido_pedido_id",
+          "def": "CREATE INDEX idx_detalle_pedido_pedido_id ON public.detalle_pedido USING btree (pedido_id)",
+          "table": "public.detalle_pedido",
+          "columns": [
+            "pedido_id"
+          ]
+        },
+        {
+          "name": "idx_detalle_pedido_stock",
+          "def": "CREATE INDEX idx_detalle_pedido_stock ON public.detalle_pedido USING btree (stock_id)",
+          "table": "public.detalle_pedido",
+          "columns": [
+            "stock_id"
+          ]
+        }
+      ],
+      "constraints": [
+        {
+          "name": "detalle_pedido_cantidad_check",
+          "type": "CHECK",
+          "def": "CHECK ((cantidad \u003e 0))",
+          "table": "public.detalle_pedido",
+          "referenced_table": "",
+          "columns": [
+            "cantidad"
+          ]
+        },
+        {
+          "name": "detalle_pedido_pkey",
+          "type": "PRIMARY KEY",
+          "def": "PRIMARY KEY (detalle_id)",
+          "table": "public.detalle_pedido",
+          "referenced_table": "",
+          "columns": [
+            "detalle_id"
+          ]
+        },
+        {
+          "name": "detalle_pedido_pedido_id_fkey",
+          "type": "FOREIGN KEY",
+          "def": "FOREIGN KEY (pedido_id) REFERENCES pedidos(pedido_id) ON DELETE CASCADE",
+          "table": "public.detalle_pedido",
+          "referenced_table": "public.pedidos",
+          "columns": [
+            "pedido_id"
+          ],
+          "referenced_columns": [
+            "pedido_id"
+          ]
+        },
+        {
+          "name": "detalle_pedido_stock_id_fkey",
+          "type": "FOREIGN KEY",
+          "def": "FOREIGN KEY (stock_id) REFERENCES stock(stock_id)",
+          "table": "public.detalle_pedido",
+          "referenced_table": "public.stock",
+          "columns": [
+            "stock_id"
+          ],
+          "referenced_columns": [
+            "stock_id"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "public.devoluciones",
+      "type": "BASE TABLE",
+      "columns": [
+        {
+          "name": "devolucion_id",
+          "type": "integer",
+          "nullable": false,
+          "default": "nextval('devoluciones_devolucion_id_seq'::regclass)"
+        },
+        {
+          "name": "detalle_id",
+          "type": "integer",
+          "nullable": false
+        },
+        {
+          "name": "motivo",
+          "type": "text",
+          "nullable": true
+        },
+        {
+          "name": "cantidad_devuelta",
+          "type": "integer",
+          "nullable": false
+        },
+        {
+          "name": "fecha_solicitud",
+          "type": "timestamp without time zone",
+          "nullable": false,
+          "default": "now()"
+        },
+        {
+          "name": "estado_devolucion",
+          "type": "varchar(50)",
+          "nullable": false,
+          "default": "'solicitada'::character varying"
+        },
+        {
+          "name": "fecha_modificacion",
+          "type": "timestamp without time zone",
+          "nullable": true
+        }
+      ],
+      "indexes": [
+        {
+          "name": "devoluciones_detalle_id_key",
+          "def": "CREATE UNIQUE INDEX devoluciones_detalle_id_key ON public.devoluciones USING btree (detalle_id)",
+          "table": "public.devoluciones",
+          "columns": [
+            "detalle_id"
+          ]
+        },
+        {
+          "name": "devoluciones_pkey",
+          "def": "CREATE UNIQUE INDEX devoluciones_pkey ON public.devoluciones USING btree (devolucion_id)",
+          "table": "public.devoluciones",
+          "columns": [
+            "devolucion_id"
+          ]
+        },
+        {
+          "name": "idx_devoluciones_detalle",
+          "def": "CREATE INDEX idx_devoluciones_detalle ON public.devoluciones USING btree (detalle_id)",
+          "table": "public.devoluciones",
+          "columns": [
+            "detalle_id"
+          ]
+        }
+      ],
+      "constraints": [
+        {
+          "name": "devoluciones_cantidad_devuelta_check",
+          "type": "CHECK",
+          "def": "CHECK ((cantidad_devuelta \u003e 0))",
+          "table": "public.devoluciones",
+          "referenced_table": "",
+          "columns": [
+            "cantidad_devuelta"
+          ]
+        },
+        {
+          "name": "devoluciones_estado_devolucion_check",
+          "type": "CHECK",
+          "def": "CHECK (((estado_devolucion)::text = ANY (ARRAY[('solicitada'::character varying)::text, ('aprobada'::character varying)::text, ('recibida'::character varying)::text, ('reembolsada'::character varying)::text, ('rechazada'::character varying)::text])))",
+          "table": "public.devoluciones",
+          "referenced_table": "",
+          "columns": [
+            "estado_devolucion"
+          ]
+        },
+        {
+          "name": "devoluciones_detalle_id_fkey",
+          "type": "FOREIGN KEY",
+          "def": "FOREIGN KEY (detalle_id) REFERENCES detalle_pedido(detalle_id)",
+          "table": "public.devoluciones",
+          "referenced_table": "public.detalle_pedido",
+          "columns": [
+            "detalle_id"
+          ],
+          "referenced_columns": [
+            "detalle_id"
+          ]
+        },
+        {
+          "name": "devoluciones_detalle_id_key",
+          "type": "UNIQUE",
+          "def": "UNIQUE (detalle_id)",
+          "table": "public.devoluciones",
+          "referenced_table": "",
+          "columns": [
+            "detalle_id"
+          ]
+        },
+        {
+          "name": "devoluciones_pkey",
+          "type": "PRIMARY KEY",
+          "def": "PRIMARY KEY (devolucion_id)",
+          "table": "public.devoluciones",
+          "referenced_table": "",
+          "columns": [
+            "devolucion_id"
+          ]
+        }
+      ],
+      "triggers": [
+        {
+          "name": "trg_devoluciones_modificacion",
+          "def": "CREATE TRIGGER trg_devoluciones_modificacion BEFORE UPDATE ON public.devoluciones FOR EACH ROW EXECUTE FUNCTION fn_actualizar_fecha_modificacion()"
+        }
+      ]
+    },
+    {
+      "name": "public.direcciones",
+      "type": "BASE TABLE",
+      "columns": [
+        {
+          "name": "direccion_id",
+          "type": "integer",
+          "nullable": false,
+          "default": "nextval('direcciones_direccion_id_seq'::regclass)"
+        },
+        {
+          "name": "cliente_id",
+          "type": "integer",
+          "nullable": false
+        },
+        {
+          "name": "direccion_linea_1",
+          "type": "varchar(255)",
+          "nullable": false
+        },
+        {
+          "name": "ciudad",
+          "type": "varchar(100)",
+          "nullable": false
+        },
+        {
+          "name": "codigo_postal",
+          "type": "varchar(20)",
+          "nullable": false
+        },
+        {
+          "name": "pais",
+          "type": "varchar(50)",
+          "nullable": false
+        },
+        {
+          "name": "estado",
+          "type": "varchar(20)",
+          "nullable": false,
+          "default": "'activo'::character varying"
+        },
+        {
+          "name": "fecha_creacion",
+          "type": "timestamp without time zone",
+          "nullable": false,
+          "default": "now()"
+        },
+        {
+          "name": "fecha_modificacion",
+          "type": "timestamp without time zone",
+          "nullable": true
+        }
+      ],
+      "indexes": [
+        {
+          "name": "direcciones_pkey",
+          "def": "CREATE UNIQUE INDEX direcciones_pkey ON public.direcciones USING btree (direccion_id)",
+          "table": "public.direcciones",
+          "columns": [
+            "direccion_id"
+          ]
+        },
+        {
+          "name": "idx_direcciones_cliente",
+          "def": "CREATE INDEX idx_direcciones_cliente ON public.direcciones USING btree (cliente_id)",
+          "table": "public.direcciones",
+          "columns": [
+            "cliente_id"
+          ]
+        }
+      ],
+      "constraints": [
+        {
+          "name": "direcciones_estado_check",
+          "type": "CHECK",
+          "def": "CHECK (((estado)::text = ANY (ARRAY[('activo'::character varying)::text, ('inactivo'::character varying)::text])))",
+          "table": "public.direcciones",
+          "referenced_table": "",
+          "columns": [
+            "estado"
+          ]
+        },
+        {
+          "name": "direcciones_cliente_id_fkey",
+          "type": "FOREIGN KEY",
+          "def": "FOREIGN KEY (cliente_id) REFERENCES clientes(cliente_id) ON DELETE CASCADE",
+          "table": "public.direcciones",
+          "referenced_table": "public.clientes",
+          "columns": [
+            "cliente_id"
+          ],
+          "referenced_columns": [
+            "cliente_id"
+          ]
+        },
+        {
+          "name": "direcciones_pkey",
+          "type": "PRIMARY KEY",
+          "def": "PRIMARY KEY (direccion_id)",
+          "table": "public.direcciones",
+          "referenced_table": "",
+          "columns": [
+            "direccion_id"
+          ]
+        }
+      ],
+      "triggers": [
+        {
+          "name": "trg_direcciones_modificacion",
+          "def": "CREATE TRIGGER trg_direcciones_modificacion BEFORE UPDATE ON public.direcciones FOR EACH ROW EXECUTE FUNCTION fn_actualizar_fecha_modificacion()"
+        }
+      ]
+    },
+    {
+      "name": "public.envios",
+      "type": "BASE TABLE",
+      "columns": [
+        {
+          "name": "envio_id",
+          "type": "integer",
+          "nullable": false,
+          "default": "nextval('envios_envio_id_seq'::regclass)"
+        },
+        {
+          "name": "pedido_id",
+          "type": "integer",
+          "nullable": false
+        },
+        {
+          "name": "fecha_envio",
+          "type": "timestamp without time zone",
+          "nullable": true
+        },
+        {
+          "name": "transportista",
+          "type": "varchar(100)",
+          "nullable": true
+        },
+        {
+          "name": "numero_tracking",
+          "type": "varchar(100)",
+          "nullable": true
+        },
+        {
+          "name": "estado_envio",
+          "type": "varchar(50)",
+          "nullable": false,
+          "default": "'en_preparacion'::character varying"
+        },
+        {
+          "name": "fecha_creacion",
+          "type": "timestamp without time zone",
+          "nullable": false,
+          "default": "now()"
+        },
+        {
+          "name": "fecha_modificacion",
+          "type": "timestamp without time zone",
+          "nullable": true
+        }
+      ],
+      "indexes": [
+        {
+          "name": "envios_pkey",
+          "def": "CREATE UNIQUE INDEX envios_pkey ON public.envios USING btree (envio_id)",
+          "table": "public.envios",
+          "columns": [
+            "envio_id"
+          ]
+        },
+        {
+          "name": "idx_envios_estado",
+          "def": "CREATE INDEX idx_envios_estado ON public.envios USING btree (estado_envio)",
+          "table": "public.envios",
+          "columns": [
+            "estado_envio"
+          ]
+        },
+        {
+          "name": "idx_envios_numero_tracking",
+          "def": "CREATE INDEX idx_envios_numero_tracking ON public.envios USING btree (numero_tracking)",
+          "table": "public.envios",
+          "columns": [
+            "numero_tracking"
+          ]
+        },
+        {
+          "name": "idx_envios_pedido",
+          "def": "CREATE INDEX idx_envios_pedido ON public.envios USING btree (pedido_id)",
+          "table": "public.envios",
+          "columns": [
+            "pedido_id"
+          ]
+        }
+      ],
+      "constraints": [
+        {
+          "name": "envios_estado_envio_check",
+          "type": "CHECK",
+          "def": "CHECK (((estado_envio)::text = ANY (ARRAY[('en_preparacion'::character varying)::text, ('en_transito'::character varying)::text, ('entregado'::character varying)::text, ('fallido'::character varying)::text])))",
+          "table": "public.envios",
+          "referenced_table": "",
+          "columns": [
+            "estado_envio"
+          ]
+        },
+        {
+          "name": "envios_pkey",
+          "type": "PRIMARY KEY",
+          "def": "PRIMARY KEY (envio_id)",
+          "table": "public.envios",
+          "referenced_table": "",
+          "columns": [
+            "envio_id"
+          ]
+        },
+        {
+          "name": "envios_pedido_id_fkey",
+          "type": "FOREIGN KEY",
+          "def": "FOREIGN KEY (pedido_id) REFERENCES pedidos(pedido_id)",
+          "table": "public.envios",
+          "referenced_table": "public.pedidos",
+          "columns": [
+            "pedido_id"
+          ],
+          "referenced_columns": [
+            "pedido_id"
+          ]
+        }
+      ],
+      "triggers": [
+        {
+          "name": "trg_envios_modificacion",
+          "def": "CREATE TRIGGER trg_envios_modificacion BEFORE UPDATE ON public.envios FOR EACH ROW EXECUTE FUNCTION fn_actualizar_fecha_modificacion()"
+        }
+      ]
+    },
+    {
+      "name": "public.historial_estados",
+      "type": "BASE TABLE",
+      "comment": "Historial de cambios de estado para timeline visual de pedidos. \r\nComplementa la tabla auditoria con información específica para UX.",
+      "columns": [
+        {
+          "name": "historial_id",
+          "type": "integer",
+          "nullable": false,
+          "default": "nextval('historial_estados_historial_id_seq'::regclass)"
+        },
+        {
+          "name": "pedido_id",
+          "type": "integer",
+          "nullable": false
+        },
+        {
+          "name": "estado_anterior",
+          "type": "varchar(50)",
+          "nullable": true,
+          "comment": "Estado previo del pedido. NULL para el estado inicial (creación)."
+        },
+        {
+          "name": "estado_nuevo",
+          "type": "varchar(50)",
+          "nullable": false
+        },
+        {
+          "name": "usuario",
+          "type": "varchar(100)",
+          "nullable": true,
+          "default": "CURRENT_USER"
+        },
+        {
+          "name": "comentario",
+          "type": "text",
+          "nullable": true,
+          "comment": "Nota o motivo del cambio de estado (ej: \"Pedido enviado por FedEx\", \"Cancelado por cliente\")."
+        },
+        {
+          "name": "fecha_cambio",
+          "type": "timestamp without time zone",
+          "nullable": false,
+          "default": "now()"
+        }
+      ],
+      "indexes": [
+        {
+          "name": "historial_estados_pkey",
+          "def": "CREATE UNIQUE INDEX historial_estados_pkey ON public.historial_estados USING btree (historial_id)",
+          "table": "public.historial_estados",
+          "columns": [
+            "historial_id"
+          ]
+        },
+        {
+          "name": "idx_historial_estados_fecha",
+          "def": "CREATE INDEX idx_historial_estados_fecha ON public.historial_estados USING btree (fecha_cambio DESC)",
+          "table": "public.historial_estados",
+          "columns": [
+            "fecha_cambio"
+          ]
+        },
+        {
+          "name": "idx_historial_estados_pedido",
+          "def": "CREATE INDEX idx_historial_estados_pedido ON public.historial_estados USING btree (pedido_id, fecha_cambio DESC)",
+          "table": "public.historial_estados",
+          "columns": [
+            "pedido_id",
+            "fecha_cambio"
+          ]
+        }
+      ],
+      "constraints": [
+        {
+          "name": "chk_estado_anterior",
+          "type": "CHECK",
+          "def": "CHECK ((((estado_anterior)::text = ANY (ARRAY[('pendiente'::character varying)::text, ('pagado'::character varying)::text, ('enviado'::character varying)::text, ('cancelado'::character varying)::text, ('completado'::character varying)::text])) OR (estado_anterior IS NULL)))",
+          "table": "public.historial_estados",
+          "referenced_table": "",
+          "columns": [
+            "estado_anterior"
+          ]
+        },
+        {
+          "name": "chk_estado_nuevo",
+          "type": "CHECK",
+          "def": "CHECK (((estado_nuevo)::text = ANY (ARRAY[('pendiente'::character varying)::text, ('pagado'::character varying)::text, ('enviado'::character varying)::text, ('cancelado'::character varying)::text, ('completado'::character varying)::text])))",
+          "table": "public.historial_estados",
+          "referenced_table": "",
+          "columns": [
+            "estado_nuevo"
+          ]
+        },
+        {
+          "name": "historial_estados_pkey",
+          "type": "PRIMARY KEY",
+          "def": "PRIMARY KEY (historial_id)",
+          "table": "public.historial_estados",
+          "referenced_table": "",
+          "columns": [
+            "historial_id"
+          ]
+        },
+        {
+          "name": "historial_estados_pedido_id_fkey",
+          "type": "FOREIGN KEY",
+          "def": "FOREIGN KEY (pedido_id) REFERENCES pedidos(pedido_id) ON DELETE CASCADE",
+          "table": "public.historial_estados",
+          "referenced_table": "public.pedidos",
+          "columns": [
+            "pedido_id"
+          ],
+          "referenced_columns": [
+            "pedido_id"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "public.pedidos",
+      "type": "BASE TABLE",
+      "columns": [
+        {
+          "name": "pedido_id",
+          "type": "integer",
+          "nullable": false,
+          "default": "nextval('pedidos_pedido_id_seq'::regclass)"
+        },
+        {
+          "name": "cliente_id",
+          "type": "integer",
+          "nullable": false
+        },
+        {
+          "name": "direccion_envio_id",
+          "type": "integer",
+          "nullable": false
+        },
+        {
+          "name": "cupon_id",
+          "type": "integer",
+          "nullable": true
+        },
+        {
+          "name": "fecha_pedido",
+          "type": "timestamp without time zone",
+          "nullable": false,
+          "default": "now()"
+        },
+        {
+          "name": "estado_pedido",
+          "type": "varchar(50)",
+          "nullable": false,
+          "default": "'pendiente'::character varying"
+        },
+        {
+          "name": "subtotal",
+          "type": "numeric(12,2)",
+          "nullable": false
+        },
+        {
+          "name": "descuento_aplicado",
+          "type": "numeric(12,2)",
+          "nullable": false,
+          "default": "0"
+        },
+        {
+          "name": "impuestos",
+          "type": "numeric(12,2)",
+          "nullable": false,
+          "default": "0"
+        },
+        {
+          "name": "total_pedido",
+          "type": "numeric(12,2)",
+          "nullable": false
+        },
+        {
+          "name": "fecha_modificacion",
+          "type": "timestamp without time zone",
+          "nullable": true
+        }
+      ],
+      "indexes": [
+        {
+          "name": "pedidos_pkey",
+          "def": "CREATE UNIQUE INDEX pedidos_pkey ON public.pedidos USING btree (pedido_id)",
+          "table": "public.pedidos",
+          "columns": [
+            "pedido_id"
+          ]
+        },
+        {
+          "name": "idx_pedidos_cliente_estado",
+          "def": "CREATE INDEX idx_pedidos_cliente_estado ON public.pedidos USING btree (cliente_id, estado_pedido)",
+          "table": "public.pedidos",
+          "columns": [
+            "cliente_id",
+            "estado_pedido"
+          ]
+        },
+        {
+          "name": "idx_pedidos_cliente_id",
+          "def": "CREATE INDEX idx_pedidos_cliente_id ON public.pedidos USING btree (cliente_id)",
+          "table": "public.pedidos",
+          "columns": [
+            "cliente_id"
+          ]
+        },
+        {
+          "name": "idx_pedidos_estado",
+          "def": "CREATE INDEX idx_pedidos_estado ON public.pedidos USING btree (estado_pedido)",
+          "table": "public.pedidos",
+          "columns": [
+            "estado_pedido"
+          ]
+        },
+        {
+          "name": "idx_pedidos_fecha",
+          "def": "CREATE INDEX idx_pedidos_fecha ON public.pedidos USING btree (fecha_pedido)",
+          "table": "public.pedidos",
+          "columns": [
+            "fecha_pedido"
+          ]
+        },
+        {
+          "name": "idx_pedidos_fecha_estado",
+          "def": "CREATE INDEX idx_pedidos_fecha_estado ON public.pedidos USING btree (fecha_pedido, estado_pedido)",
+          "table": "public.pedidos",
+          "columns": [
+            "fecha_pedido",
+            "estado_pedido"
+          ]
+        }
+      ],
+      "constraints": [
+        {
+          "name": "pedidos_estado_pedido_check",
+          "type": "CHECK",
+          "def": "CHECK (((estado_pedido)::text = ANY (ARRAY[('pendiente'::character varying)::text, ('pagado'::character varying)::text, ('enviado'::character varying)::text, ('cancelado'::character varying)::text, ('completado'::character varying)::text])))",
+          "table": "public.pedidos",
+          "referenced_table": "",
+          "columns": [
+            "estado_pedido"
+          ]
+        },
+        {
+          "name": "pedidos_subtotal_check",
+          "type": "CHECK",
+          "def": "CHECK ((subtotal \u003e= (0)::numeric))",
+          "table": "public.pedidos",
+          "referenced_table": "",
+          "columns": [
+            "subtotal"
+          ]
+        },
+        {
+          "name": "pedidos_total_pedido_check",
+          "type": "CHECK",
+          "def": "CHECK ((total_pedido \u003e= (0)::numeric))",
+          "table": "public.pedidos",
+          "referenced_table": "",
+          "columns": [
+            "total_pedido"
+          ]
+        },
+        {
+          "name": "pedidos_cliente_id_fkey",
+          "type": "FOREIGN KEY",
+          "def": "FOREIGN KEY (cliente_id) REFERENCES clientes(cliente_id)",
+          "table": "public.pedidos",
+          "referenced_table": "public.clientes",
+          "columns": [
+            "cliente_id"
+          ],
+          "referenced_columns": [
+            "cliente_id"
+          ]
+        },
+        {
+          "name": "pedidos_cupon_id_fkey",
+          "type": "FOREIGN KEY",
+          "def": "FOREIGN KEY (cupon_id) REFERENCES cupones(cupon_id)",
+          "table": "public.pedidos",
+          "referenced_table": "public.cupones",
+          "columns": [
+            "cupon_id"
+          ],
+          "referenced_columns": [
+            "cupon_id"
+          ]
+        },
+        {
+          "name": "pedidos_direccion_envio_id_fkey",
+          "type": "FOREIGN KEY",
+          "def": "FOREIGN KEY (direccion_envio_id) REFERENCES direcciones(direccion_id)",
+          "table": "public.pedidos",
+          "referenced_table": "public.direcciones",
+          "columns": [
+            "direccion_envio_id"
+          ],
+          "referenced_columns": [
+            "direccion_id"
+          ]
+        },
+        {
+          "name": "pedidos_pkey",
+          "type": "PRIMARY KEY",
+          "def": "PRIMARY KEY (pedido_id)",
+          "table": "public.pedidos",
+          "referenced_table": "",
+          "columns": [
+            "pedido_id"
+          ]
+        }
+      ],
+      "triggers": [
+        {
+          "name": "trg_auditoria_pedidos",
+          "def": "CREATE TRIGGER trg_auditoria_pedidos AFTER INSERT OR DELETE OR UPDATE ON public.pedidos FOR EACH ROW EXECUTE FUNCTION fn_auditoria_pedidos()"
+        },
+        {
+          "name": "trg_pedidos_modificacion",
+          "def": "CREATE TRIGGER trg_pedidos_modificacion BEFORE UPDATE ON public.pedidos FOR EACH ROW EXECUTE FUNCTION fn_actualizar_fecha_modificacion()"
+        },
+        {
+          "name": "trg_registrar_cambio_estado_pedido",
+          "def": "CREATE TRIGGER trg_registrar_cambio_estado_pedido AFTER INSERT OR UPDATE OF estado_pedido ON public.pedidos FOR EACH ROW EXECUTE FUNCTION fn_registrar_cambio_estado()",
+          "comment": "Registra automáticamente cambios de estado en historial_estados para timeline visual."
+        }
+      ]
+    },
+    {
+      "name": "public.mv_clientes_vip",
+      "type": "MATERIALIZED VIEW",
+      "columns": [
+        {
+          "name": "cliente_id",
+          "type": "integer",
+          "nullable": true
+        },
+        {
+          "name": "nombre",
+          "type": "varchar(100)",
+          "nullable": true
+        },
+        {
+          "name": "apellido",
+          "type": "varchar(100)",
+          "nullable": true
+        },
+        {
+          "name": "email",
+          "type": "varchar(255)",
+          "nullable": true
+        },
+        {
+          "name": "total_pedidos",
+          "type": "bigint",
+          "nullable": true
+        },
+        {
+          "name": "total_gastado",
+          "type": "numeric",
+          "nullable": true
+        },
+        {
+          "name": "ticket_promedio",
+          "type": "numeric",
+          "nullable": true
+        },
+        {
+          "name": "ultima_compra",
+          "type": "timestamp without time zone",
+          "nullable": true
+        },
+        {
+          "name": "primera_compra",
+          "type": "timestamp without time zone",
+          "nullable": true
+        },
+        {
+          "name": "categoria_vip",
+          "type": "text",
+          "nullable": true
+        }
+      ],
+      "indexes": [
+        {
+          "name": "idx_mv_clientes_vip_categoria",
+          "def": "CREATE INDEX idx_mv_clientes_vip_categoria ON public.mv_clientes_vip USING btree (categoria_vip)",
+          "table": "public.mv_clientes_vip",
+          "columns": [
+            "categoria_vip"
+          ]
+        },
+        {
+          "name": "idx_mv_clientes_vip_id",
+          "def": "CREATE UNIQUE INDEX idx_mv_clientes_vip_id ON public.mv_clientes_vip USING btree (cliente_id)",
+          "table": "public.mv_clientes_vip",
+          "columns": [
+            "cliente_id"
+          ]
+        }
+      ],
+      "def": "CREATE MATERIALIZED VIEW mv_clientes_vip AS (\n SELECT c.cliente_id,\n    c.nombre,\n    c.apellido,\n    c.email,\n    count(p.pedido_id) AS total_pedidos,\n    sum(p.total_pedido) AS total_gastado,\n    avg(p.total_pedido) AS ticket_promedio,\n    max(p.fecha_pedido) AS ultima_compra,\n    min(p.fecha_pedido) AS primera_compra,\n        CASE\n            WHEN (sum(p.total_pedido) \u003e= (1000)::numeric) THEN 'Platinum'::text\n            WHEN (sum(p.total_pedido) \u003e= (500)::numeric) THEN 'Gold'::text\n            WHEN (count(p.pedido_id) \u003e= 5) THEN 'Silver'::text\n            ELSE 'Bronze'::text\n        END AS categoria_vip\n   FROM (clientes c\n     JOIN pedidos p ON ((c.cliente_id = p.cliente_id)))\n  WHERE (((p.estado_pedido)::text = ANY (ARRAY[('pagado'::character varying)::text, ('enviado'::character varying)::text, ('completado'::character varying)::text])) AND ((c.estado)::text = 'activo'::text))\n  GROUP BY c.cliente_id, c.nombre, c.apellido, c.email\n HAVING ((count(p.pedido_id) \u003e= 3) OR (sum(p.total_pedido) \u003e= (500)::numeric))\n  ORDER BY (sum(p.total_pedido)) DESC\n)",
+      "referenced_tables": [
+        "public.clientes",
+        "public.pedidos"
+      ]
+    },
+    {
+      "name": "public.productos",
+      "type": "BASE TABLE",
+      "columns": [
+        {
+          "name": "producto_id",
+          "type": "integer",
+          "nullable": false,
+          "default": "nextval('productos_producto_id_seq'::regclass)"
+        },
+        {
+          "name": "categoria_id",
+          "type": "integer",
+          "nullable": false
+        },
+        {
+          "name": "nombre_producto",
+          "type": "varchar(255)",
+          "nullable": false
+        },
+        {
+          "name": "descripcion_larga",
+          "type": "text",
+          "nullable": true
+        },
+        {
+          "name": "estado",
+          "type": "varchar(20)",
+          "nullable": false,
+          "default": "'activo'::character varying"
+        },
+        {
+          "name": "fecha_creacion",
+          "type": "timestamp without time zone",
+          "nullable": false,
+          "default": "now()"
+        },
+        {
+          "name": "fecha_modificacion",
+          "type": "timestamp without time zone",
+          "nullable": true
+        }
+      ],
+      "indexes": [
+        {
+          "name": "productos_pkey",
+          "def": "CREATE UNIQUE INDEX productos_pkey ON public.productos USING btree (producto_id)",
+          "table": "public.productos",
+          "columns": [
+            "producto_id"
+          ]
+        },
+        {
+          "name": "idx_productos_categoria",
+          "def": "CREATE INDEX idx_productos_categoria ON public.productos USING btree (categoria_id) WHERE ((estado)::text = 'activo'::text)",
+          "table": "public.productos",
+          "columns": [
+            "categoria_id"
+          ]
+        },
+        {
+          "name": "idx_productos_nombre",
+          "def": "CREATE INDEX idx_productos_nombre ON public.productos USING btree (nombre_producto)",
+          "table": "public.productos",
+          "columns": [
+            "nombre_producto"
+          ]
+        }
+      ],
+      "constraints": [
+        {
+          "name": "productos_estado_check",
+          "type": "CHECK",
+          "def": "CHECK (((estado)::text = ANY (ARRAY[('activo'::character varying)::text, ('inactivo'::character varying)::text, ('descontinuado'::character varying)::text])))",
+          "table": "public.productos",
+          "referenced_table": "",
+          "columns": [
+            "estado"
+          ]
+        },
+        {
+          "name": "productos_categoria_id_fkey",
+          "type": "FOREIGN KEY",
+          "def": "FOREIGN KEY (categoria_id) REFERENCES categorias(categoria_id)",
+          "table": "public.productos",
+          "referenced_table": "public.categorias",
+          "columns": [
+            "categoria_id"
+          ],
+          "referenced_columns": [
+            "categoria_id"
+          ]
+        },
+        {
+          "name": "productos_pkey",
+          "type": "PRIMARY KEY",
+          "def": "PRIMARY KEY (producto_id)",
+          "table": "public.productos",
+          "referenced_table": "",
+          "columns": [
+            "producto_id"
+          ]
+        }
+      ],
+      "triggers": [
+        {
+          "name": "trg_auditoria_productos",
+          "def": "CREATE TRIGGER trg_auditoria_productos AFTER INSERT OR DELETE OR UPDATE ON public.productos FOR EACH ROW EXECUTE FUNCTION fn_auditoria_productos()"
+        },
+        {
+          "name": "trg_productos_modificacion",
+          "def": "CREATE TRIGGER trg_productos_modificacion BEFORE UPDATE ON public.productos FOR EACH ROW EXECUTE FUNCTION fn_actualizar_fecha_modificacion()"
+        }
+      ]
+    },
+    {
+      "name": "public.stock",
+      "type": "BASE TABLE",
+      "columns": [
+        {
+          "name": "stock_id",
+          "type": "integer",
+          "nullable": false,
+          "default": "nextval('stock_stock_id_seq'::regclass)"
+        },
+        {
+          "name": "producto_id",
+          "type": "integer",
+          "nullable": false
+        },
+        {
+          "name": "sku",
+          "type": "varchar(100)",
+          "nullable": false
+        },
+        {
+          "name": "precio_unitario",
+          "type": "numeric(10,2)",
+          "nullable": false
+        },
+        {
+          "name": "cantidad_en_stock",
+          "type": "integer",
+          "nullable": false,
+          "default": "0"
+        },
+        {
+          "name": "cantidad_reservada",
+          "type": "integer",
+          "nullable": false,
+          "default": "0"
+        },
+        {
+          "name": "estado",
+          "type": "varchar(20)",
+          "nullable": false,
+          "default": "'activo'::character varying"
+        },
+        {
+          "name": "fecha_creacion",
+          "type": "timestamp without time zone",
+          "nullable": false,
+          "default": "now()"
+        },
+        {
+          "name": "fecha_modificacion",
+          "type": "timestamp without time zone",
+          "nullable": true
+        }
+      ],
+      "indexes": [
+        {
+          "name": "stock_pkey",
+          "def": "CREATE UNIQUE INDEX stock_pkey ON public.stock USING btree (stock_id)",
+          "table": "public.stock",
+          "columns": [
+            "stock_id"
+          ]
+        },
+        {
+          "name": "stock_sku_key",
+          "def": "CREATE UNIQUE INDEX stock_sku_key ON public.stock USING btree (sku)",
+          "table": "public.stock",
+          "columns": [
+            "sku"
+          ]
+        },
+        {
+          "name": "idx_stock_estado",
+          "def": "CREATE INDEX idx_stock_estado ON public.stock USING btree (estado)",
+          "table": "public.stock",
+          "columns": [
+            "estado"
+          ]
+        },
+        {
+          "name": "idx_stock_producto_estado",
+          "def": "CREATE INDEX idx_stock_producto_estado ON public.stock USING btree (producto_id, estado)",
+          "table": "public.stock",
+          "columns": [
+            "producto_id",
+            "estado"
+          ]
+        },
+        {
+          "name": "idx_stock_producto_id",
+          "def": "CREATE INDEX idx_stock_producto_id ON public.stock USING btree (producto_id)",
+          "table": "public.stock",
+          "columns": [
+            "producto_id"
+          ]
+        },
+        {
+          "name": "idx_stock_sku",
+          "def": "CREATE INDEX idx_stock_sku ON public.stock USING btree (sku)",
+          "table": "public.stock",
+          "columns": [
+            "sku"
+          ]
+        }
+      ],
+      "constraints": [
+        {
+          "name": "chk_reserva_stock",
+          "type": "CHECK",
+          "def": "CHECK ((cantidad_reservada \u003c= cantidad_en_stock))",
+          "table": "public.stock",
+          "referenced_table": "",
+          "columns": [
+            "cantidad_reservada",
+            "cantidad_en_stock"
+          ]
+        },
+        {
+          "name": "stock_cantidad_en_stock_check",
+          "type": "CHECK",
+          "def": "CHECK ((cantidad_en_stock \u003e= 0))",
+          "table": "public.stock",
+          "referenced_table": "",
+          "columns": [
+            "cantidad_en_stock"
+          ]
+        },
+        {
+          "name": "stock_cantidad_reservada_check",
+          "type": "CHECK",
+          "def": "CHECK ((cantidad_reservada \u003e= 0))",
+          "table": "public.stock",
+          "referenced_table": "",
+          "columns": [
+            "cantidad_reservada"
+          ]
+        },
+        {
+          "name": "stock_estado_check",
+          "type": "CHECK",
+          "def": "CHECK (((estado)::text = ANY (ARRAY[('activo'::character varying)::text, ('inactivo'::character varying)::text])))",
+          "table": "public.stock",
+          "referenced_table": "",
+          "columns": [
+            "estado"
+          ]
+        },
+        {
+          "name": "stock_precio_unitario_check",
+          "type": "CHECK",
+          "def": "CHECK ((precio_unitario \u003e (0)::numeric))",
+          "table": "public.stock",
+          "referenced_table": "",
+          "columns": [
+            "precio_unitario"
+          ]
+        },
+        {
+          "name": "stock_producto_id_fkey",
+          "type": "FOREIGN KEY",
+          "def": "FOREIGN KEY (producto_id) REFERENCES productos(producto_id)",
+          "table": "public.stock",
+          "referenced_table": "public.productos",
+          "columns": [
+            "producto_id"
+          ],
+          "referenced_columns": [
+            "producto_id"
+          ]
+        },
+        {
+          "name": "stock_pkey",
+          "type": "PRIMARY KEY",
+          "def": "PRIMARY KEY (stock_id)",
+          "table": "public.stock",
+          "referenced_table": "",
+          "columns": [
+            "stock_id"
+          ]
+        },
+        {
+          "name": "stock_sku_key",
+          "type": "UNIQUE",
+          "def": "UNIQUE (sku)",
+          "table": "public.stock",
+          "referenced_table": "",
+          "columns": [
+            "sku"
+          ]
+        }
+      ],
+      "triggers": [
+        {
+          "name": "trg_auditoria_stock",
+          "def": "CREATE TRIGGER trg_auditoria_stock AFTER INSERT OR DELETE OR UPDATE ON public.stock FOR EACH ROW EXECUTE FUNCTION fn_auditoria_stock()"
+        },
+        {
+          "name": "trg_stock_modificacion",
+          "def": "CREATE TRIGGER trg_stock_modificacion BEFORE UPDATE ON public.stock FOR EACH ROW EXECUTE FUNCTION fn_actualizar_fecha_modificacion()"
+        }
+      ]
+    },
+    {
+      "name": "public.mv_productos_top_ventas",
+      "type": "MATERIALIZED VIEW",
+      "columns": [
+        {
+          "name": "producto_id",
+          "type": "integer",
+          "nullable": true
+        },
+        {
+          "name": "nombre_producto",
+          "type": "varchar(255)",
+          "nullable": true
+        },
+        {
+          "name": "descripcion_larga",
+          "type": "text",
+          "nullable": true
+        },
+        {
+          "name": "nombre_categoria",
+          "type": "varchar(100)",
+          "nullable": true
+        },
+        {
+          "name": "total_vendido",
+          "type": "bigint",
+          "nullable": true
+        },
+        {
+          "name": "ingresos_totales",
+          "type": "numeric",
+          "nullable": true
+        },
+        {
+          "name": "num_pedidos",
+          "type": "bigint",
+          "nullable": true
+        },
+        {
+          "name": "precio_promedio",
+          "type": "numeric",
+          "nullable": true
+        }
+      ],
+      "indexes": [
+        {
+          "name": "idx_mv_productos_top_ventas_id",
+          "def": "CREATE UNIQUE INDEX idx_mv_productos_top_ventas_id ON public.mv_productos_top_ventas USING btree (producto_id)",
+          "table": "public.mv_productos_top_ventas",
+          "columns": [
+            "producto_id"
+          ]
+        }
+      ],
+      "def": "CREATE MATERIALIZED VIEW mv_productos_top_ventas AS (\n SELECT p.producto_id,\n    p.nombre_producto,\n    p.descripcion_larga,\n    c.nombre_categoria,\n    sum(dp.cantidad) AS total_vendido,\n    sum(((dp.cantidad)::numeric * dp.precio_unitario_compra)) AS ingresos_totales,\n    count(DISTINCT ped.pedido_id) AS num_pedidos,\n    avg(dp.precio_unitario_compra) AS precio_promedio\n   FROM ((((productos p\n     JOIN categorias c ON ((p.categoria_id = c.categoria_id)))\n     JOIN stock s ON ((p.producto_id = s.producto_id)))\n     JOIN detalle_pedido dp ON ((s.stock_id = dp.stock_id)))\n     JOIN pedidos ped ON ((dp.pedido_id = ped.pedido_id)))\n  WHERE (((ped.estado_pedido)::text = ANY (ARRAY[('pagado'::character varying)::text, ('enviado'::character varying)::text, ('completado'::character varying)::text])) AND ((p.estado)::text = 'activo'::text))\n  GROUP BY p.producto_id, p.nombre_producto, p.descripcion_larga, c.nombre_categoria\n  ORDER BY (sum(dp.cantidad)) DESC\n)",
+      "referenced_tables": [
+        "public.productos",
+        "public.categorias",
+        "public.stock",
+        "public.detalle_pedido",
+        "public.pedidos"
+      ]
+    },
+    {
+      "name": "public.pagos",
+      "type": "BASE TABLE",
+      "columns": [
+        {
+          "name": "pago_id",
+          "type": "integer",
+          "nullable": false,
+          "default": "nextval('pagos_pago_id_seq'::regclass)"
+        },
+        {
+          "name": "pedido_id",
+          "type": "integer",
+          "nullable": false
+        },
+        {
+          "name": "fecha_pago",
+          "type": "timestamp without time zone",
+          "nullable": false,
+          "default": "now()"
+        },
+        {
+          "name": "monto",
+          "type": "numeric(12,2)",
+          "nullable": false
+        },
+        {
+          "name": "metodo_pago",
+          "type": "varchar(50)",
+          "nullable": true
+        },
+        {
+          "name": "estado_pago",
+          "type": "varchar(20)",
+          "nullable": false
+        },
+        {
+          "name": "id_transaccion_externa",
+          "type": "varchar(255)",
+          "nullable": true
+        },
+        {
+          "name": "fecha_modificacion",
+          "type": "timestamp without time zone",
+          "nullable": true
+        }
+      ],
+      "indexes": [
+        {
+          "name": "pagos_pkey",
+          "def": "CREATE UNIQUE INDEX pagos_pkey ON public.pagos USING btree (pago_id)",
+          "table": "public.pagos",
+          "columns": [
+            "pago_id"
+          ]
+        },
+        {
+          "name": "idx_pagos_id_transaccion_externa",
+          "def": "CREATE INDEX idx_pagos_id_transaccion_externa ON public.pagos USING btree (id_transaccion_externa)",
+          "table": "public.pagos",
+          "columns": [
+            "id_transaccion_externa"
+          ]
+        },
+        {
+          "name": "idx_pagos_pedido_id",
+          "def": "CREATE INDEX idx_pagos_pedido_id ON public.pagos USING btree (pedido_id)",
+          "table": "public.pagos",
+          "columns": [
+            "pedido_id"
+          ]
+        }
+      ],
+      "constraints": [
+        {
+          "name": "pagos_estado_pago_check",
+          "type": "CHECK",
+          "def": "CHECK (((estado_pago)::text = ANY (ARRAY[('exitoso'::character varying)::text, ('fallido'::character varying)::text, ('pendiente'::character varying)::text, ('reembolsado'::character varying)::text])))",
+          "table": "public.pagos",
+          "referenced_table": "",
+          "columns": [
+            "estado_pago"
+          ]
+        },
+        {
+          "name": "pagos_monto_check",
+          "type": "CHECK",
+          "def": "CHECK ((monto \u003e (0)::numeric))",
+          "table": "public.pagos",
+          "referenced_table": "",
+          "columns": [
+            "monto"
+          ]
+        },
+        {
+          "name": "pagos_pkey",
+          "type": "PRIMARY KEY",
+          "def": "PRIMARY KEY (pago_id)",
+          "table": "public.pagos",
+          "referenced_table": "",
+          "columns": [
+            "pago_id"
+          ]
+        },
+        {
+          "name": "pagos_pedido_id_fkey",
+          "type": "FOREIGN KEY",
+          "def": "FOREIGN KEY (pedido_id) REFERENCES pedidos(pedido_id)",
+          "table": "public.pagos",
+          "referenced_table": "public.pedidos",
+          "columns": [
+            "pedido_id"
+          ],
+          "referenced_columns": [
+            "pedido_id"
+          ]
+        }
+      ],
+      "triggers": [
+        {
+          "name": "trg_auditoria_pagos",
+          "def": "CREATE TRIGGER trg_auditoria_pagos AFTER INSERT OR DELETE OR UPDATE ON public.pagos FOR EACH ROW EXECUTE FUNCTION fn_auditoria_pagos()"
+        },
+        {
+          "name": "trg_pagos_modificacion",
+          "def": "CREATE TRIGGER trg_pagos_modificacion BEFORE UPDATE ON public.pagos FOR EACH ROW EXECUTE FUNCTION fn_actualizar_fecha_modificacion()"
+        }
+      ]
+    },
+    {
+      "name": "public.vw_timeline_pedidos",
+      "type": "VIEW",
+      "comment": "Vista combinada de historial de estados con información del pedido y cliente. \r\nOptimizada para listados de actividad reciente.",
+      "columns": [
+        {
+          "name": "historial_id",
+          "type": "integer",
+          "nullable": true
+        },
+        {
+          "name": "pedido_id",
+          "type": "integer",
+          "nullable": true
+        },
+        {
+          "name": "estado_anterior",
+          "type": "varchar(50)",
+          "nullable": true
+        },
+        {
+          "name": "estado_nuevo",
+          "type": "varchar(50)",
+          "nullable": true
+        },
+        {
+          "name": "usuario",
+          "type": "varchar(100)",
+          "nullable": true
+        },
+        {
+          "name": "comentario",
+          "type": "text",
+          "nullable": true
+        },
+        {
+          "name": "fecha_cambio",
+          "type": "timestamp without time zone",
+          "nullable": true
+        },
+        {
+          "name": "cliente_id",
+          "type": "integer",
+          "nullable": true
+        },
+        {
+          "name": "nombre_cliente",
+          "type": "text",
+          "nullable": true
+        },
+        {
+          "name": "total_pedido",
+          "type": "numeric(12,2)",
+          "nullable": true
+        },
+        {
+          "name": "fecha_pedido",
+          "type": "timestamp without time zone",
+          "nullable": true
+        }
+      ],
+      "def": "CREATE VIEW vw_timeline_pedidos AS (\n SELECT h.historial_id,\n    h.pedido_id,\n    h.estado_anterior,\n    h.estado_nuevo,\n    h.usuario,\n    h.comentario,\n    h.fecha_cambio,\n    p.cliente_id,\n    (((c.nombre)::text || ' '::text) || (c.apellido)::text) AS nombre_cliente,\n    p.total_pedido,\n    p.fecha_pedido\n   FROM ((historial_estados h\n     JOIN pedidos p ON ((h.pedido_id = p.pedido_id)))\n     JOIN clientes c ON ((p.cliente_id = c.cliente_id)))\n  ORDER BY h.fecha_cambio DESC\n)",
+      "referenced_tables": [
+        "public.historial_estados",
+        "public.pedidos",
+        "public.clientes"
+      ]
+    }
+  ],
+  "relations": [
+    {
+      "table": "public.detalle_pedido",
+      "columns": [
+        "pedido_id"
+      ],
+      "cardinality": "zero_or_more",
+      "parent_table": "public.pedidos",
+      "parent_columns": [
+        "pedido_id"
+      ],
+      "parent_cardinality": "exactly_one",
+      "def": "FOREIGN KEY (pedido_id) REFERENCES pedidos(pedido_id) ON DELETE CASCADE"
+    },
+    {
+      "table": "public.detalle_pedido",
+      "columns": [
+        "stock_id"
+      ],
+      "cardinality": "zero_or_more",
+      "parent_table": "public.stock",
+      "parent_columns": [
+        "stock_id"
+      ],
+      "parent_cardinality": "exactly_one",
+      "def": "FOREIGN KEY (stock_id) REFERENCES stock(stock_id)"
+    },
+    {
+      "table": "public.devoluciones",
+      "columns": [
+        "detalle_id"
+      ],
+      "cardinality": "zero_or_one",
+      "parent_table": "public.detalle_pedido",
+      "parent_columns": [
+        "detalle_id"
+      ],
+      "parent_cardinality": "exactly_one",
+      "def": "FOREIGN KEY (detalle_id) REFERENCES detalle_pedido(detalle_id)"
+    },
+    {
+      "table": "public.direcciones",
+      "columns": [
+        "cliente_id"
+      ],
+      "cardinality": "zero_or_more",
+      "parent_table": "public.clientes",
+      "parent_columns": [
+        "cliente_id"
+      ],
+      "parent_cardinality": "exactly_one",
+      "def": "FOREIGN KEY (cliente_id) REFERENCES clientes(cliente_id) ON DELETE CASCADE"
+    },
+    {
+      "table": "public.envios",
+      "columns": [
+        "pedido_id"
+      ],
+      "cardinality": "zero_or_more",
+      "parent_table": "public.pedidos",
+      "parent_columns": [
+        "pedido_id"
+      ],
+      "parent_cardinality": "exactly_one",
+      "def": "FOREIGN KEY (pedido_id) REFERENCES pedidos(pedido_id)"
+    },
+    {
+      "table": "public.historial_estados",
+      "columns": [
+        "pedido_id"
+      ],
+      "cardinality": "zero_or_more",
+      "parent_table": "public.pedidos",
+      "parent_columns": [
+        "pedido_id"
+      ],
+      "parent_cardinality": "exactly_one",
+      "def": "FOREIGN KEY (pedido_id) REFERENCES pedidos(pedido_id) ON DELETE CASCADE"
+    },
+    {
+      "table": "public.pedidos",
+      "columns": [
+        "cliente_id"
+      ],
+      "cardinality": "zero_or_more",
+      "parent_table": "public.clientes",
+      "parent_columns": [
+        "cliente_id"
+      ],
+      "parent_cardinality": "exactly_one",
+      "def": "FOREIGN KEY (cliente_id) REFERENCES clientes(cliente_id)"
+    },
+    {
+      "table": "public.pedidos",
+      "columns": [
+        "cupon_id"
+      ],
+      "cardinality": "zero_or_more",
+      "parent_table": "public.cupones",
+      "parent_columns": [
+        "cupon_id"
+      ],
+      "parent_cardinality": "zero_or_one",
+      "def": "FOREIGN KEY (cupon_id) REFERENCES cupones(cupon_id)"
+    },
+    {
+      "table": "public.pedidos",
+      "columns": [
+        "direccion_envio_id"
+      ],
+      "cardinality": "zero_or_more",
+      "parent_table": "public.direcciones",
+      "parent_columns": [
+        "direccion_id"
+      ],
+      "parent_cardinality": "exactly_one",
+      "def": "FOREIGN KEY (direccion_envio_id) REFERENCES direcciones(direccion_id)"
+    },
+    {
+      "table": "public.productos",
+      "columns": [
+        "categoria_id"
+      ],
+      "cardinality": "zero_or_more",
+      "parent_table": "public.categorias",
+      "parent_columns": [
+        "categoria_id"
+      ],
+      "parent_cardinality": "exactly_one",
+      "def": "FOREIGN KEY (categoria_id) REFERENCES categorias(categoria_id)"
+    },
+    {
+      "table": "public.stock",
+      "columns": [
+        "producto_id"
+      ],
+      "cardinality": "zero_or_more",
+      "parent_table": "public.productos",
+      "parent_columns": [
+        "producto_id"
+      ],
+      "parent_cardinality": "exactly_one",
+      "def": "FOREIGN KEY (producto_id) REFERENCES productos(producto_id)"
+    },
+    {
+      "table": "public.pagos",
+      "columns": [
+        "pedido_id"
+      ],
+      "cardinality": "zero_or_more",
+      "parent_table": "public.pedidos",
+      "parent_columns": [
+        "pedido_id"
+      ],
+      "parent_cardinality": "exactly_one",
+      "def": "FOREIGN KEY (pedido_id) REFERENCES pedidos(pedido_id)"
+    }
+  ],
+  "functions": [
+    {
+      "name": "public.fn_actualizar_fecha_modificacion",
+      "return_type": "trigger",
+      "arguments": "",
+      "type": "FUNCTION"
+    },
+    {
+      "name": "public.fn_alerta_stock_bajo",
+      "return_type": "record",
+      "arguments": "p_limite integer DEFAULT 15",
+      "type": "FUNCTION"
+    },
+    {
+      "name": "public.fn_auditoria_categorias",
+      "return_type": "trigger",
+      "arguments": "",
+      "type": "FUNCTION"
+    },
+    {
+      "name": "public.fn_auditoria_clientes",
+      "return_type": "trigger",
+      "arguments": "",
+      "type": "FUNCTION"
+    },
+    {
+      "name": "public.fn_auditoria_cupones",
+      "return_type": "trigger",
+      "arguments": "",
+      "type": "FUNCTION"
+    },
+    {
+      "name": "public.fn_auditoria_generica",
+      "return_type": "trigger",
+      "arguments": "",
+      "type": "FUNCTION"
+    },
+    {
+      "name": "public.fn_auditoria_pagos",
+      "return_type": "trigger",
+      "arguments": "",
+      "type": "FUNCTION"
+    },
+    {
+      "name": "public.fn_auditoria_pedidos",
+      "return_type": "trigger",
+      "arguments": "",
+      "type": "FUNCTION"
+    },
+    {
+      "name": "public.fn_auditoria_productos",
+      "return_type": "trigger",
+      "arguments": "",
+      "type": "FUNCTION"
+    },
+    {
+      "name": "public.fn_auditoria_stock",
+      "return_type": "trigger",
+      "arguments": "",
+      "type": "FUNCTION"
+    },
+    {
+      "name": "public.fn_calcular_comision_venta",
+      "return_type": "numeric",
+      "arguments": "p_pedido_id integer",
+      "type": "FUNCTION"
+    },
+    {
+      "name": "public.fn_calcular_descuento_cupon",
+      "return_type": "numeric",
+      "arguments": "p_cupon_id integer, p_subtotal numeric",
+      "type": "FUNCTION"
+    },
+    {
+      "name": "public.fn_calcular_monto_reembolso",
+      "return_type": "numeric",
+      "arguments": "p_detalle_id integer, p_cantidad_devuelta integer",
+      "type": "FUNCTION"
+    },
+    {
+      "name": "public.fn_calcular_puntos_fidelidad",
+      "return_type": "int4",
+      "arguments": "p_cliente_id integer",
+      "type": "FUNCTION"
+    },
+    {
+      "name": "public.fn_calcular_tiempo_entrega",
+      "return_type": "int4",
+      "arguments": "p_envio_id integer",
+      "type": "FUNCTION"
+    },
+    {
+      "name": "public.fn_calcular_total_pedido",
+      "return_type": "numeric",
+      "arguments": "p_pedido_id integer",
+      "type": "FUNCTION"
+    },
+    {
+      "name": "public.fn_calcular_total_ventas_periodo",
+      "return_type": "numeric",
+      "arguments": "p_fecha_desde timestamp without time zone, p_fecha_hasta timestamp without time zone",
+      "type": "FUNCTION"
+    },
+    {
+      "name": "public.fn_cambiar_estado_pedido",
+      "return_type": "bool",
+      "arguments": "p_pedido_id integer, p_nuevo_estado character varying, p_comentario text DEFAULT NULL::text",
+      "type": "FUNCTION"
+    },
+    {
+      "name": "public.fn_cliente_tiene_pedidos",
+      "return_type": "bool",
+      "arguments": "p_cliente_id integer",
+      "type": "FUNCTION"
+    },
+    {
+      "name": "public.fn_distribucion_estados_pedidos",
+      "return_type": "record",
+      "arguments": "",
+      "type": "FUNCTION"
+    },
+    {
+      "name": "public.fn_estadisticas_dashboard",
+      "return_type": "record",
+      "arguments": "",
+      "type": "FUNCTION"
+    },
+    {
+      "name": "public.fn_estadisticas_estados",
+      "return_type": "record",
+      "arguments": "p_pedido_id integer",
+      "type": "FUNCTION"
+    },
+    {
+      "name": "public.fn_historial_cambios",
+      "return_type": "record",
+      "arguments": "p_tabla character varying, p_registro_id integer, p_limite integer DEFAULT 50",
+      "type": "FUNCTION"
+    },
+    {
+      "name": "public.fn_metricas_producto",
+      "return_type": "record",
+      "arguments": "p_producto_id integer",
+      "type": "FUNCTION"
+    },
+    {
+      "name": "public.fn_obtener_clientes_frecuentes",
+      "return_type": "record",
+      "arguments": "p_limite integer DEFAULT 10",
+      "type": "FUNCTION"
+    },
+    {
+      "name": "public.fn_obtener_precio_producto",
+      "return_type": "numeric",
+      "arguments": "p_stock_id integer",
+      "type": "FUNCTION"
+    },
+    {
+      "name": "public.fn_obtener_productos_mas_vendidos",
+      "return_type": "record",
+      "arguments": "p_limite integer DEFAULT 10, p_fecha_desde timestamp without time zone DEFAULT NULL::timestamp without time zone, p_fecha_hasta timestamp without time zone DEFAULT NULL::timestamp without time zone",
+      "type": "FUNCTION"
+    },
+    {
+      "name": "public.fn_obtener_timeline_pedido",
+      "return_type": "record",
+      "arguments": "p_pedido_id integer",
+      "type": "FUNCTION"
+    },
+    {
+      "name": "public.fn_registrar_cambio_estado",
+      "return_type": "trigger",
+      "arguments": "",
+      "type": "FUNCTION"
+    },
+    {
+      "name": "public.fn_tendencia_pedidos",
+      "return_type": "record",
+      "arguments": "p_dias integer DEFAULT 30",
+      "type": "FUNCTION"
+    },
+    {
+      "name": "public.fn_validar_cupon_aplicable",
+      "return_type": "bool",
+      "arguments": "p_codigo_cupon character varying",
+      "type": "FUNCTION"
+    },
+    {
+      "name": "public.fn_validar_devolucion_permitida",
+      "return_type": "bool",
+      "arguments": "p_pedido_id integer",
+      "type": "FUNCTION"
+    },
+    {
+      "name": "public.fn_validar_stock_disponible",
+      "return_type": "bool",
+      "arguments": "p_stock_id integer, p_cantidad_solicitada integer",
+      "type": "FUNCTION"
+    },
+    {
+      "name": "public.fn_ventas_diarias",
+      "return_type": "record",
+      "arguments": "p_dias integer DEFAULT 7",
+      "type": "FUNCTION"
+    },
+    {
+      "name": "public.fn_ventas_por_categoria",
+      "return_type": "record",
+      "arguments": "p_limite integer DEFAULT 10",
+      "type": "FUNCTION"
+    },
+    {
+      "name": "public.sp_actualizar_estado_envio",
+      "return_type": "void",
+      "arguments": "IN p_envio_id integer, IN p_nuevo_estado character varying, IN p_transportista character varying DEFAULT NULL::character varying, IN p_numero_tracking character varying DEFAULT NULL::character varying",
+      "type": "PROCEDURE"
+    },
+    {
+      "name": "public.sp_actualizar_stock_compra",
+      "return_type": "void",
+      "arguments": "IN p_pedido_id integer",
+      "type": "PROCEDURE"
+    },
+    {
+      "name": "public.sp_ajustar_precios_categoria",
+      "return_type": "void",
+      "arguments": "IN p_categoria_id integer, IN p_porcentaje_ajuste numeric",
+      "type": "PROCEDURE"
+    },
+    {
+      "name": "public.sp_aplicar_cupon_pedido",
+      "return_type": "void",
+      "arguments": "IN p_pedido_id integer, IN p_codigo_cupon character varying",
+      "type": "PROCEDURE"
+    },
+    {
+      "name": "public.sp_cancelar_pedido",
+      "return_type": "void",
+      "arguments": "IN p_pedido_id integer, IN p_motivo text",
+      "type": "PROCEDURE"
+    },
+    {
+      "name": "public.sp_crear_pedido",
+      "return_type": "record",
+      "arguments": "IN p_cliente_id integer, IN p_direccion_envio_id integer, IN p_cupon_id integer, IN p_items jsonb, OUT p_pedido_id integer",
+      "type": "PROCEDURE"
+    },
+    {
+      "name": "public.sp_eliminar_cliente",
+      "return_type": "void",
+      "arguments": "IN p_cliente_id integer",
+      "type": "PROCEDURE"
+    },
+    {
+      "name": "public.sp_eliminar_pago",
+      "return_type": "void",
+      "arguments": "IN p_pago_id integer",
+      "type": "PROCEDURE"
+    },
+    {
+      "name": "public.sp_eliminar_pedido",
+      "return_type": "void",
+      "arguments": "IN p_pedido_id integer",
+      "type": "PROCEDURE"
+    },
+    {
+      "name": "public.sp_eliminar_producto",
+      "return_type": "void",
+      "arguments": "IN p_producto_id integer",
+      "type": "PROCEDURE"
+    },
+    {
+      "name": "public.sp_eliminar_stock",
+      "return_type": "void",
+      "arguments": "IN p_stock_id integer",
+      "type": "PROCEDURE"
+    },
+    {
+      "name": "public.sp_procesar_devolucion",
+      "return_type": "void",
+      "arguments": "IN p_detalle_id integer, IN p_cantidad_devuelta integer, IN p_motivo text",
+      "type": "PROCEDURE"
+    },
+    {
+      "name": "public.sp_procesar_pago",
+      "return_type": "void",
+      "arguments": "IN p_pedido_id integer, IN p_monto numeric, IN p_metodo_pago character varying, IN p_id_transaccion character varying",
+      "type": "PROCEDURE"
+    },
+    {
+      "name": "public.sp_reabastecer_stock",
+      "return_type": "void",
+      "arguments": "IN p_stock_id integer, IN p_cantidad integer, IN p_costo_unitario numeric DEFAULT NULL::numeric",
+      "type": "PROCEDURE"
+    }
+  ],
+  "driver": {
+    "name": "postgres",
+    "database_version": "PostgreSQL 16.11 on x86_64-pc-linux-musl, compiled by gcc (Alpine 15.2.0) 15.2.0, 64-bit",
+    "meta": {
+      "current_schema": "public",
+      "search_paths": [
+        "postgres",
+        "public"
+      ],
+      "dict": {
+        "Functions": "Stored procedures and functions"
+      }
+    }
+  }
+}

@@ -1,0 +1,20 @@
+# Configuración de tbls (https://github.com/k1LoW/tbls)
+# Genera la REFERENCE estructural de la base a docs/reference/database/.
+#
+# Este archivo vive en audit/tools/ (junto al resto del tooling de auditoría),
+# NO en la raíz. Por eso hay que pasarle -c. El docPath se resuelve relativo al
+# directorio donde se corre tbls (la raíz del repo), no a este archivo.
+#
+# Regenerar (contenedor, sin binario global — la base debe estar levantada, correr desde la raíz):
+#   docker run --rm --network ecommers-proyecto_default -v "$PWD:/work" -w /work k1low/tbls doc -c audit/tools/.tbls.yml --force
+#
+# Notas:
+# - El host 'ecommerce_db' resuelve dentro de la red de docker-compose (ecommers-proyecto_default).
+# - La contraseña espeja docker-compose.yml (ya versionada; no es un secreto nuevo).
+dsn: postgres://postgres:12345678@ecommerce_db:5432/ecommerce_db?sslmode=disable
+docPath: docs/reference/database
+
+# Diagramas ER embebidos como mermaid dentro del .md (sin archivos .svg sueltos).
+# GitHub y la mayoría de visores renderizan mermaid de forma nativa.
+er:
+  format: mermaid

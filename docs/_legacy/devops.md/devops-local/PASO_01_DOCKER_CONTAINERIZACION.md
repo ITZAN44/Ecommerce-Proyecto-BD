@@ -806,21 +806,7 @@ pipeline {
 
 ---
 
-### PASO 6: Monitoreo con Prometheus + Grafana
-
-**Objetivos:**
-- Instalar Prometheus en contenedor
-- Configurar exporters (node_exporter, postgres_exporter)
-- Desplegar Grafana
-- Crear dashboards de monitoreo
-- Configurar alertas (CPU, RAM, disco)
-
-**Métricas a monitorear:**
-- CPU y RAM de contenedores
-- Conexiones activas a PostgreSQL
-- Tiempo de respuesta de endpoints
-- Tasa de errores HTTP
-- Espacio en disco
+![1766630515305](image/PASO_01_DOCKER_CONTAINERIZACION/1766630515305.png)
 
 ---
 
