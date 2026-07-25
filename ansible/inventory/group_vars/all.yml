@@ -1,0 +1,54 @@
+---
+# Variables globales para TODOS los hosts
+# Este archivo se aplica a todos los servidores del inventario
+
+# ==================================================
+# INFORMACIÓN DEL PROYECTO
+# ==================================================
+project_name: "ecommerce-astro"
+project_user: "clark"
+project_dir: "/home/{{ project_user }}/{{ project_name }}"
+
+# ==================================================
+# CONFIGURACIÓN DE DOCKER
+# ==================================================
+docker_version: "latest"
+docker_compose_version: "v2.24.0"
+
+# ==================================================
+# CONFIGURACIÓN DE NGINX
+# ==================================================
+nginx_port: 80
+nginx_ssl_port: 443
+nginx_server_name: "192.168.0.119"
+
+# ==================================================
+# CONFIGURACIÓN DE K3S
+# ==================================================
+k3s_version: "v1.33.6+k3s1"
+k3s_install_dir: "/usr/local/bin"
+
+# ==================================================
+# CONFIGURACIÓN DE JENKINS
+# ==================================================
+jenkins_version: "lts"
+jenkins_port: 8080
+
+# ==================================================
+# CONFIGURACIÓN DE BASE DE DATOS
+# ==================================================
+db_name: "ecommerce_db"
+db_user: "postgres"
+# NOTA: db_password se define en group_vars/production.yml (NO commitear)
+
+# ==================================================
+# CONFIGURACIÓN DE RED
+# ==================================================
+allowed_ssh_ips:
+  - "192.168.0.0/24"  # Red local
+
+firewall_allowed_ports:
+  - 22    # SSH
+  - 80    # HTTP
+  - 443   # HTTPS
+  - 8080  # Jenkins

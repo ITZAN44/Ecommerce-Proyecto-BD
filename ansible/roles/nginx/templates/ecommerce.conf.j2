@@ -1,0 +1,49 @@
+# ============================================
+# Nginx Reverse Proxy Configuration
+# Generado automáticamente por Ansible
+# ============================================
+
+server {
+    listen {{ nginx_port }};
+    server_name {{ nginx_server_name }};
+
+    # Logs
+    access_log {{ nginx_access_log }};
+    error_log {{ nginx_error_log }};
+
+    # Client settings
+    client_max_body_size {{ nginx_client_max_body_size }};
+
+    # Proxy settings
+    location / {
+        # Backend upstream (K3s Service ClusterIP)
+        proxy_pass http://{{ nginx_backend_host }}:{{ nginx_backend_port }};
+
+        # Proxy headers
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+
+        # WebSocket support
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection "upgrade";
+
+        # Timeouts
+        proxy_connect_timeout {{ nginx_proxy_connect_timeout }}s;
+        proxy_send_timeout {{ nginx_proxy_send_timeout }}s;
+        proxy_read_timeout {{ nginx_proxy_read_timeout }}s;
+
+        # Buffering
+        proxy_buffering off;
+        proxy_cache_bypass $http_upgrade;
+    }
+
+    # Health check endpoint (opcional)
+    location /nginx-health {
+        access_log off;
+        return 200 "Nginx OK\n";
+        add_header Content-Type text/plain;
+    }
+}

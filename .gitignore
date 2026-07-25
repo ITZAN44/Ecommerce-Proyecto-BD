@@ -23,6 +23,9 @@ secrets/
 *.secret
 *.key
 
+# Inventario Ansible con datos reales de infraestructura
+ansible/inventory/hosts.local.ini
+
 # agent tooling state
 .atl/
 

@@ -1,0 +1,27 @@
+---
+# ============================================
+# HANDLERS para el rol jenkins
+# ============================================
+
+- name: Reload systemd
+  systemd:
+    daemon_reload: yes
+  become: yes
+
+- name: Restart Jenkins containers
+  command: docker compose -f {{ jenkins_config_dir }}/docker-compose.jenkins.yml restart
+  args:
+    chdir: "{{ jenkins_config_dir }}"
+  ignore_errors: yes
+
+- name: Stop Jenkins containers
+  command: docker compose -f {{ jenkins_config_dir }}/docker-compose.jenkins.yml down
+  args:
+    chdir: "{{ jenkins_config_dir }}"
+  ignore_errors: yes
+
+- name: Start Jenkins service
+  systemd:
+    name: jenkins-docker
+    state: started
+  become: yes

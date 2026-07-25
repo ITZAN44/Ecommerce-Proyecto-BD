@@ -1,0 +1,302 @@
+---
+# ============================================
+# PLAYBOOK MAESTRO: Infraestructura Completa
+# ============================================
+# Propósito: Automatizar todo el stack desde cero
+# Uso: ansible-playbook playbooks/deploy-all.yml
+# Tiempo estimado: 15-20 minutos
+# ============================================
+
+- name: "🚀 DEPLOYMENT COMPLETO - Ecommerce Infrastructure as Code"
+  hosts: production
+  become: yes
+  gather_facts: yes
+  
+  vars:
+    deployment_start_time: "{{ ansible_date_time.iso8601 }}"
+  
+  # ============================================
+  # PRE-FLIGHT CHECKS
+  # ============================================
+  pre_tasks:
+    - name: "📋 Banner de inicio"
+      debug:
+        msg: |
+          ╔════════════════════════════════════════════════════════════════╗
+          ║                                                                ║
+          ║        🚀 DEPLOYMENT COMPLETO DE INFRAESTRUCTURA 🚀            ║
+          ║                                                                ║
+          ║  Ecommerce Stack: Docker + Nginx + K3s + Jenkins              ║
+          ║  Host: {{ inventory_hostname }} ({{ ansible_host }})
+          ║  Inicio: {{ deployment_start_time }}
+          ║                                                                ║
+          ╚════════════════════════════════════════════════════════════════╝
+          
+          📦 Componentes a instalar:
+          ✓ Docker Engine + Docker Compose
+          ✓ Nginx (Reverse Proxy)
+          ✓ K3s (Kubernetes)
+          ✓ PostgreSQL (en K3s)
+          ✓ Ecommerce App (2 réplicas en K3s)
+          ✓ Jenkins (CI/CD con integración K3s)
+          
+          ⏱️  Tiempo estimado: 15-20 minutos
+          
+          ⚠️  IMPORTANTE: Este proceso modificará el sistema
+          
+    - name: "🔍 Verificar sistema operativo"
+      assert:
+        that:
+          - ansible_distribution == "Ubuntu"
+          - ansible_distribution_version is version('20.04', '>=')
+        fail_msg: "Este playbook requiere Ubuntu 20.04 o superior"
+        success_msg: "✅ Ubuntu {{ ansible_distribution_version }} detectado"
+    
+    - name: "🔍 Verificar recursos del sistema"
+      assert:
+        that:
+          - ansible_memtotal_mb >= 2048
+        fail_msg: "Se requieren al menos 2GB de RAM"
+        success_msg: "✅ RAM disponible: {{ ansible_memtotal_mb }}MB"
+    
+    - name: "🔍 Verificar espacio en disco"
+      assert:
+        that:
+          - item.size_available > 5000000000  # 5GB
+        fail_msg: "Se requieren al menos 5GB de espacio libre"
+        success_msg: "✅ Espacio disponible suficiente"
+      loop: "{{ ansible_mounts }}"
+      when: item.mount == '/'
+    
+    - name: "🔍 Verificar conectividad a internet"
+      uri:
+        url: https://get.docker.com
+        method: HEAD
+        status_code: 200
+      register: internet_check
+      failed_when: false
+      changed_when: false
+      when: not ansible_check_mode
+    
+    - name: "✅ Resumen de verificaciones pre-vuelo"
+      debug:
+        msg: |
+          ========================================
+          ✅ VERIFICACIONES COMPLETADAS
+          
+          Sistema: {{ ansible_distribution }} {{ ansible_distribution_version }}
+          CPU: {{ ansible_processor_vcpus }} cores
+          RAM: {{ ansible_memtotal_mb }}MB
+          Disco: {{ (ansible_mounts | selectattr('mount', 'equalto', '/') | first).size_available | int / 1024 / 1024 / 1024 | round(1) }}GB disponibles
+          Red: {{ '✅ Conectado' if (internet_check is defined and internet_check.status is defined and internet_check.status == 200) else '⚠️ No verificado (check mode)' if ansible_check_mode else '⚠️ Sin internet' }}
+          
+          Iniciando deployment...
+          ========================================
+  
+  # ============================================
+  # DEPLOYMENT DE ROLES EN ORDEN
+  # ============================================
+  tasks:
+    - name: "📦 FASE 1/4: Instalando Docker"
+      debug:
+        msg: |
+          ════════════════════════════════════════
+          📦 FASE 1/4: Docker Engine
+          ════════════════════════════════════════
+    
+    - name: "Ejecutar rol Docker"
+      include_role:
+        name: docker
+      tags: docker
+    
+    - name: "✅ Docker instalado correctamente"
+      debug:
+        msg: "✅ Fase 1/4 completada - Docker Engine operativo"
+    
+    - name: "🌐 FASE 2/4: Configurando Nginx"
+      debug:
+        msg: |
+          ════════════════════════════════════════
+          🌐 FASE 2/4: Nginx Reverse Proxy
+          ════════════════════════════════════════
+    
+    - name: "Ejecutar rol Nginx"
+      include_role:
+        name: nginx
+      tags: nginx
+    
+    - name: "✅ Nginx configurado correctamente"
+      debug:
+        msg: "✅ Fase 2/4 completada - Nginx operativo"
+    
+    - name: "☸️  FASE 3/4: Desplegando K3s + Aplicación"
+      debug:
+        msg: |
+          ════════════════════════════════════════
+          ☸️  FASE 3/4: Kubernetes (K3s) + App
+          ════════════════════════════════════════
+          
+          ⏱️  Esta fase puede tomar 5-8 minutos
+          - Instalación de K3s
+          - Deployment de PostgreSQL
+          - Deployment de Ecommerce App (2 réplicas)
+    
+    - name: "Ejecutar rol K3s"
+      include_role:
+        name: k3s
+      tags: k3s
+    
+    - name: "✅ K3s y aplicación desplegados"
+      debug:
+        msg: "✅ Fase 3/4 completada - Aplicación corriendo en K3s"
+    
+    - name: "🔧 FASE 4/4: Instalando Jenkins"
+      debug:
+        msg: |
+          ════════════════════════════════════════
+          🔧 FASE 4/4: Jenkins CI/CD
+          ════════════════════════════════════════
+    
+    - name: "Ejecutar rol Jenkins"
+      include_role:
+        name: jenkins
+      tags: jenkins
+    
+    - name: "✅ Jenkins instalado correctamente"
+      debug:
+        msg: "✅ Fase 4/4 completada - Jenkins operativo"
+  
+  # ============================================
+  # VERIFICACIÓN FINAL
+  # ============================================
+  post_tasks:
+    - name: "🔍 VERIFICACIÓN FINAL: Verificando todos los servicios"
+      debug:
+        msg: |
+          ════════════════════════════════════════
+          🔍 VERIFICACIÓN FINAL DE SERVICIOS
+          ════════════════════════════════════════
+    
+    - name: "Verificar Docker"
+      command: docker --version
+      register: docker_final
+      changed_when: false
+      when: not ansible_check_mode
+    
+    - name: "Verificar Nginx"
+      systemd:
+        name: nginx
+        state: started
+      register: nginx_final
+      when: not ansible_check_mode
+    
+    - name: "Verificar K3s"
+      systemd:
+        name: k3s
+        state: started
+      register: k3s_final
+      when: not ansible_check_mode
+    
+    - name: "Obtener pods de K3s"
+      command: kubectl get pods -n ecommerce --no-headers
+      register: k3s_pods
+      changed_when: false
+      when: not ansible_check_mode
+    
+    - name: "Contar pods Running"
+      set_fact:
+        running_pods: "{{ k3s_pods.stdout_lines | select('search', 'Running') | list | length }}"
+        total_pods: "{{ k3s_pods.stdout_lines | length }}"
+      when: 
+        - not ansible_check_mode
+        - k3s_pods is defined
+        - k3s_pods.stdout_lines is defined
+    
+    - name: "Verificar Jenkins"
+      command: docker ps -q -f name=jenkins
+      register: jenkins_final
+      changed_when: false
+      when: not ansible_check_mode
+    
+    - name: "Obtener ClusterIP de la aplicación"
+      shell: kubectl get svc ecommerce-app-service -n ecommerce -o jsonpath='{.spec.clusterIP}'
+      register: app_clusterip_final
+      changed_when: false
+      when: not ansible_check_mode
+    
+    - name: "Calcular tiempo de deployment"
+      set_fact:
+        deployment_end_time: "{{ ansible_date_time.iso8601 }}"
+    
+    - name: "🎉 RESUMEN FINAL DEL DEPLOYMENT"
+      debug:
+        msg: |
+          ╔════════════════════════════════════════════════════════════════╗
+          ║                                                                ║
+          ║          🎉 DEPLOYMENT {{ 'SIMULADO (CHECK MODE)' if ansible_check_mode else 'COMPLETADO EXITOSAMENTE' }} 🎉              ║
+          ║                                                                ║
+          ╚════════════════════════════════════════════════════════════════╝
+          
+          {% if ansible_check_mode %}
+          ⚠️  CHECK MODE ACTIVO
+          ────────────────────────────────────────────────────────────────
+          Este fue un dry-run. Ningún cambio fue aplicado al sistema.
+          
+          📝 Para ejecutar el deployment real:
+          ansible-playbook playbooks/deploy-all.yml
+          
+          ✅ VALIDACIÓN COMPLETADA:
+          ────────────────────────────────────────────────────────────────
+          ✓ Requisitos del sistema verificados
+          ✓ Roles de Ansible validados
+          ✓ Templates y configuraciones correctas
+          ✓ Estructura de deployment lista
+          {% else %}
+          📊 ESTADO DE SERVICIOS:
+          ────────────────────────────────────────────────────────────────
+          ✅ Docker:    {{ docker_final.stdout if docker_final is defined else 'N/A' }}
+          ✅ Nginx:     {{ nginx_final.status.ActiveState if (nginx_final is defined and nginx_final.status is defined) else 'N/A' }}
+          ✅ K3s:       {{ k3s_final.status.ActiveState if (k3s_final is defined and k3s_final.status is defined) else 'N/A' }}
+          ✅ Pods K3s:  {{ running_pods if running_pods is defined else '0' }}/{{ total_pods if total_pods is defined else '0' }} Running
+          ✅ Jenkins:   {{ 'Running' if (jenkins_final is defined and jenkins_final.stdout) else 'Starting...' }}
+          
+          🌐 ACCESO A SERVICIOS:
+          ────────────────────────────────────────────────────────────────
+          🌐 Aplicación:  http://{{ ansible_host }}
+          🔧 Jenkins:     http://{{ ansible_host }}:8080
+          ☸️  K3s ClusterIP: {{ app_clusterip_final.stdout if (app_clusterip_final is defined and app_clusterip_final.stdout is defined) else 'N/A' }}:80
+          {% endif %}
+          
+          📝 COMANDOS ÚTILES:
+          ────────────────────────────────────────────────────────────────
+          # Ver pods de Kubernetes
+          kubectl get all -n ecommerce
+          
+          # Ver logs de la aplicación
+          kubectl logs -n ecommerce -l app=ecommerce-app -f
+          
+          # Ver contenedores Docker
+          docker ps
+          
+          # Estado de Jenkins
+          docker logs jenkins -f
+          
+          # Verificar Nginx
+          sudo systemctl status nginx
+          
+          {% if not ansible_check_mode %}
+          📋 PRÓXIMOS PASOS:
+          ────────────────────────────────────────────────────────────────
+          1. Acceder a: http://{{ ansible_host }}
+          2. Configurar Jenkins en: http://{{ ansible_host }}:8080
+          3. Monitorear pods: kubectl get pods -n ecommerce -w
+          
+          ⏱️  TIEMPO DE DEPLOYMENT:
+          ────────────────────────────────────────────────────────────────
+          Inicio: {{ deployment_start_time }}
+          Fin:    {{ deployment_end_time }}
+          {% endif %}
+          
+          ════════════════════════════════════════════════════════════════
+          🚀 {{ '¡Validación completada! Lista para deployment real' if ansible_check_mode else '¡Infraestructura lista para producción!' }} 🚀
+          ════════════════════════════════════════════════════════════════

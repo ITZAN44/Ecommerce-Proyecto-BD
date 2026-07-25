@@ -1,0 +1,191 @@
+---
+# ============================================
+# ROLE: jenkins
+# ============================================
+# Propósito: Instalar Jenkins en Docker con integración K3s
+# ============================================
+
+# ========================================
+# PARTE 1: Preparación
+# ========================================
+
+- name: "Crear directorio para Jenkins"
+  file:
+    path: "{{ jenkins_home_dir }}"
+    state: directory
+    owner: "{{ ansible_user }}"
+    group: "{{ ansible_user }}"
+    mode: '0755'
+  become: yes
+
+- name: "Crear directorio para configuración de Jenkins"
+  file:
+    path: "{{ jenkins_config_dir }}"
+    state: directory
+    owner: "{{ ansible_user }}"
+    group: "{{ ansible_user }}"
+    mode: '0755'
+
+# ========================================
+# PARTE 2: Docker Compose para Jenkins
+# ========================================
+
+- name: "Copiar docker-compose.jenkins.yml desde template"
+  template:
+    src: docker-compose.jenkins.yml.j2
+    dest: "{{ jenkins_config_dir }}/docker-compose.jenkins.yml"
+    owner: "{{ ansible_user }}"
+    group: "{{ ansible_user }}"
+    mode: '0644'
+  notify: Restart Jenkins containers
+
+- name: "Verificar si contenedores de Jenkins ya están corriendo"
+  command: docker ps -q -f name=jenkins
+  register: jenkins_containers
+  changed_when: false
+
+# ========================================
+# PARTE 3: Configurar acceso a K3s desde Jenkins
+# ========================================
+
+- name: "Verificar si kubeconfig de K3s existe"
+  stat:
+    path: /etc/rancher/k3s/k3s.yaml
+  register: k3s_kubeconfig
+  become: yes
+
+- name: "Copiar kubeconfig de K3s para Jenkins"
+  copy:
+    src: /etc/rancher/k3s/k3s.yaml
+    dest: "{{ jenkins_home_dir }}/kubeconfig"
+    remote_src: yes
+    owner: "{{ ansible_user }}"
+    group: "{{ ansible_user }}"
+    mode: '0644'
+  become: yes
+  when: 
+    - k3s_kubeconfig.stat.exists
+    - not ansible_check_mode
+
+- name: "Actualizar server URL en kubeconfig de Jenkins"
+  replace:
+    path: "{{ jenkins_home_dir }}/kubeconfig"
+    regexp: 'https://127\.0\.0\.1:6443'
+    replace: 'https://{{ ansible_default_ipv4.address }}:6443'
+  when: 
+    - k3s_kubeconfig.stat.exists
+    - not ansible_check_mode
+
+# ========================================
+# PARTE 4: Systemd service para Jenkins
+# ========================================
+
+- name: "Crear servicio systemd para Jenkins"
+  template:
+    src: jenkins-docker.service.j2
+    dest: /etc/systemd/system/jenkins-docker.service
+    owner: root
+    group: root
+    mode: '0644'
+  become: yes
+  notify: Reload systemd
+
+- name: "Habilitar servicio Jenkins para auto-start"
+  systemd:
+    name: jenkins-docker
+    enabled: yes
+    daemon_reload: yes
+  become: yes
+
+# ========================================
+# PARTE 5: Iniciar Jenkins
+# ========================================
+
+- name: "Iniciar contenedores de Jenkins con Docker Compose"
+  command: docker compose -f {{ jenkins_config_dir }}/docker-compose.jenkins.yml up -d
+  args:
+    chdir: "{{ jenkins_config_dir }}"
+  register: jenkins_start
+  changed_when: "'Started' in jenkins_start.stderr or 'Creating' in jenkins_start.stderr"
+  when: not ansible_check_mode
+
+- name: "Esperar a que Jenkins esté disponible"
+  wait_for:
+    host: localhost
+    port: "{{ jenkins_port }}"
+    delay: 10
+    timeout: 120
+  when: 
+    - jenkins_start is defined
+    - jenkins_start.changed
+    - not ansible_check_mode
+
+# ========================================
+# PARTE 6: Obtener password inicial
+# ========================================
+
+- name: "Esperar a que se genere password inicial de Jenkins"
+  wait_for:
+    path: "{{ jenkins_data_dir }}/secrets/initialAdminPassword"
+    timeout: 60
+  ignore_errors: yes
+  register: initial_password_file
+  when: not ansible_check_mode
+
+- name: "Leer password inicial de Jenkins"
+  slurp:
+    src: "{{ jenkins_data_dir }}/secrets/initialAdminPassword"
+  register: jenkins_initial_password
+  when: 
+    - initial_password_file is defined
+    - initial_password_file is succeeded
+    - not ansible_check_mode
+  ignore_errors: yes
+
+- name: "Mostrar password inicial de Jenkins"
+  debug:
+    msg: |
+      ========================================
+      🔐 Jenkins Password Inicial:
+      {{ jenkins_initial_password['content'] | b64decode | trim }}
+      
+      Guarda este password para el setup inicial.
+      ========================================
+  when: 
+    - initial_password_file is defined
+    - initial_password_file is succeeded
+    - jenkins_initial_password is defined
+    - not ansible_check_mode
+
+# ========================================
+# PARTE 7: Verificación
+# ========================================
+
+- name: "Verificar contenedores de Jenkins"
+  command: docker ps -f name=jenkins --format "table {{.Names}}\t{{.Status}}\t{{.Ports}}"
+  register: jenkins_status
+  changed_when: false
+  when: not ansible_check_mode
+
+- name: "Resumen de instalación de Jenkins"
+  debug:
+    msg: |
+      ========================================
+      ✅ Jenkins {{ 'configurado (simulación)' if ansible_check_mode else 'instalado y configurado' }}
+      
+      {{ 'Contenedores:\n' + jenkins_status.stdout if jenkins_status.stdout is defined else 'Modo check: contenedores no verificados' }}
+      
+      Acceso:
+      http://{{ ansible_host }}:{{ jenkins_port }}
+      
+      Configuración:
+      - Home: {{ jenkins_home_dir }}
+      - Kubeconfig disponible para K3s
+      - Auto-start configurado (systemd)
+      
+      Próximos pasos:
+      1. Acceder a Jenkins en el navegador
+      2. Usar password inicial para setup
+      3. Instalar plugins recomendados
+      4. Configurar credenciales de K3s
+      ========================================

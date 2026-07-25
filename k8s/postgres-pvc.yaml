@@ -1,0 +1,13 @@
+# PersistentVolumeClaim para datos de PostgreSQL
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: postgres-data
+  namespace: ecommerce
+spec:
+  accessModes:
+    - ReadWriteOnce
+  storageClassName: local-path  # K3s local-path-provisioner
+  resources:
+    requests:
+      storage: 2Gi

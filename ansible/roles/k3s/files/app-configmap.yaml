@@ -1,0 +1,14 @@
+# ConfigMap con variables de entorno para la app
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: app-config
+  namespace: ecommerce
+data:
+  DB_HOST: postgres
+  DB_PORT: "5432"
+  DB_NAME: ecommerce_db
+  DB_USER: ecommerce_user
+  NODE_ENV: production
+  HOST: "0.0.0.0"
+  PORT: "4321"

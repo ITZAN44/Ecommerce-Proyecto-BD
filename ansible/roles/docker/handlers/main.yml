@@ -1,0 +1,29 @@
+---
+# ============================================
+# HANDLERS para el rol docker
+# ============================================
+# Los handlers se ejecutan SOLO si son notificados por una tarea
+# y SOLO se ejecutan UNA VEZ al final del playbook
+# ============================================
+
+- name: Update apt cache
+  apt:
+    update_cache: yes
+  become: yes
+
+- name: Start Docker service
+  systemd:
+    name: docker
+    state: started
+    enabled: yes
+  become: yes
+
+- name: Reboot required message
+  debug:
+    msg: |
+      ⚠️ ATENCIÓN: El usuario {{ ansible_user }} fue agregado al grupo docker.
+      Para que los cambios surtan efecto, es necesario:
+      1. Cerrar sesión SSH y volver a conectar, O
+      2. Ejecutar: newgrp docker
+      
+      Después podrás usar Docker sin sudo.

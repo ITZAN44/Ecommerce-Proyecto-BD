@@ -1,0 +1,45 @@
+---
+# ============================================
+# PLAYBOOK DE PRUEBA: Ping Test
+# ============================================
+# Propósito: Verificar conectividad SSH con los servidores
+# Uso: ansible-playbook playbooks/ping-test.yml
+# ============================================
+
+- name: "Test de Conectividad - Ping a todos los hosts"
+  hosts: all  # Ejecutar en TODOS los hosts del inventario
+  gather_facts: yes  # Recolectar información del sistema
+  
+  tasks:
+    - name: "Ping básico de Ansible"
+      ping:
+      
+    - name: "Mostrar información del sistema operativo"
+      debug:
+        msg: |
+          ========================================
+          Host: {{ inventory_hostname }}
+          OS: {{ ansible_distribution }} {{ ansible_distribution_version }}
+          Arquitectura: {{ ansible_architecture }}
+          Python: {{ ansible_python_version }}
+          ========================================
+
+    - name: "Verificar conectividad de red"
+      command: hostname -I
+      register: host_ips
+      changed_when: false  # Este comando no modifica el sistema
+      
+    - name: "Mostrar IPs del servidor"
+      debug:
+        msg: "IPs detectadas: {{ host_ips.stdout }}"
+
+    - name: "Verificar espacio en disco"
+      shell: df -h /
+      register: disk_space
+      changed_when: false
+      
+    - name: "Mostrar espacio en disco"
+      debug:
+        msg: |
+          Espacio en disco:
+          {{ disk_space.stdout }}

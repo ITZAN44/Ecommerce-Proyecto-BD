@@ -1,0 +1,42 @@
+---
+# ============================================
+# PLAYBOOK: Configurar Nginx
+# ============================================
+# Propósito: Instalar y configurar Nginx como reverse proxy
+# Uso: ansible-playbook playbooks/deploy-nginx.yml
+# ============================================
+
+- name: "Configurar Nginx reverse proxy"
+  hosts: production
+  become: yes
+  gather_facts: yes
+  
+  roles:
+    - nginx
+  
+  post_tasks:
+    - name: "Probar conectividad al backend"
+      uri:
+        url: "http://{{ nginx_backend_host }}:{{ nginx_backend_port }}"
+        method: GET
+        status_code: 200
+      register: backend_check
+      ignore_errors: yes
+      when: not ansible_check_mode
+
+    - name: "Resumen de configuración"
+      debug:
+        msg: |
+          ========================================
+          ✅ Nginx configurado correctamente
+          
+          Host: {{ inventory_hostname }}
+          Backend: {{ nginx_backend_host }}:{{ nginx_backend_port }}
+          Estado backend: {{ 'OK ✅' if (backend_check.status is defined and backend_check.status == 200) else 'No verificado' }}
+          
+          Acceso:
+          http://{{ ansible_host }}
+          
+          Verificación:
+          curl http://{{ ansible_host }}
+          ========================================

@@ -1,0 +1,8 @@
+# Namespace para aislar recursos del ecommerce
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: ecommerce
+  labels:
+    app: ecommerce
+    environment: production

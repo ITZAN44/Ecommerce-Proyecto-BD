@@ -1,0 +1,16 @@
+[Unit]
+Description=Jenkins Docker Compose Service
+Requires=docker.service
+After=docker.service
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+WorkingDirectory={{ jenkins_config_dir }}
+ExecStart=/usr/bin/docker compose -f docker-compose.jenkins.yml up -d
+ExecStop=/usr/bin/docker compose -f docker-compose.jenkins.yml down
+User={{ ansible_user }}
+Group={{ ansible_user }}
+
+[Install]
+WantedBy=multi-user.target

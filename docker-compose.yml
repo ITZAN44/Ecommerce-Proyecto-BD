@@ -1,0 +1,56 @@
+services:
+  # Base de datos PostgreSQL
+  postgres:
+    image: postgres:16-alpine
+    container_name: ecommerce_db
+    restart: always
+    environment:
+      # Credenciales tomadas de .env (no se versionan). Ver .env.example.
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?falta POSTGRES_PASSWORD; copia .env.example a .env}
+      POSTGRES_DB: ${POSTGRES_DB:-ecommerce_db}
+    ports:
+      - "5432:5432"
+    volumes:
+      # Volumen para persistir datos
+      - postgres_data:/var/lib/postgresql/data
+      # Scripts SQL de inicialización (se ejecutan automáticamente)
+      - ./database/init.sql:/docker-entrypoint-initdb.d/01_init.sql
+      - ./database/schema.sql:/docker-entrypoint-initdb.d/schema.sql
+      - ./database/functions_procedures_LIMPIO.sql:/docker-entrypoint-initdb.d/functions_procedures_LIMPIO.sql
+      - ./database/backup_bd_real.sql:/docker-entrypoint-initdb.d/backup_bd_real.sql
+      - ./database/fase1:/docker-entrypoint-initdb.d/fase1
+      - ./database/fase2:/docker-entrypoint-initdb.d/fase2
+      - ./database/fase3:/docker-entrypoint-initdb.d/fase3
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-postgres} -d ${POSTGRES_DB:-ecommerce_db}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Aplicación Astro
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: ecommerce_app
+    restart: always
+    ports:
+      - "4321:4321"
+    environment:
+      # Variables de entorno para conectar a PostgreSQL
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_NAME: ${POSTGRES_DB:-ecommerce_db}
+      DB_USER: ${POSTGRES_USER:-postgres}
+      DB_PASSWORD: ${POSTGRES_PASSWORD:?falta POSTGRES_PASSWORD; copia .env.example a .env}
+    depends_on:
+      postgres:
+        condition: service_healthy
+    volumes:
+      # Monta el código para hot-reload en desarrollo
+      - .:/app
+      - /app/node_modules
+
+volumes:
+  postgres_data:

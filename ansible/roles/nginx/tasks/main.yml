@@ -1,0 +1,105 @@
+---
+# ============================================
+# ROLE: nginx
+# ============================================
+# Propósito: Instalar y configurar Nginx como reverse proxy
+# Configuración: Proxy a K3s Service (10.43.7.181:80)
+# ============================================
+
+# 1. Instalar Nginx
+- name: "Instalar Nginx"
+  apt:
+    name: nginx
+    state: present
+    update_cache: yes
+  become: yes
+
+# 2. Asegurar que Nginx esté corriendo
+- name: "Iniciar y habilitar servicio Nginx"
+  systemd:
+    name: nginx
+    state: started
+    enabled: yes
+  become: yes
+
+# 3. Eliminar configuración por defecto
+- name: "Eliminar sitio por defecto de Nginx"
+  file:
+    path: /etc/nginx/sites-enabled/default
+    state: absent
+  become: yes
+  notify: Reload Nginx
+
+# 4. Crear configuración de reverse proxy desde template
+- name: "Configurar Nginx reverse proxy para ecommerce"
+  template:
+    src: ecommerce.conf.j2
+    dest: /etc/nginx/sites-available/ecommerce
+    owner: root
+    group: root
+    mode: '0644'
+  become: yes
+  notify: Reload Nginx
+
+# 5. Habilitar sitio (crear symlink)
+- name: "Habilitar sitio ecommerce"
+  file:
+    src: /etc/nginx/sites-available/ecommerce
+    dest: /etc/nginx/sites-enabled/ecommerce
+    state: link
+  become: yes
+  notify: Reload Nginx
+
+# 6. Eliminar archivos backup antiguos si existen
+- name: "Limpiar archivos backup de configuración"
+  shell: "rm -f /etc/nginx/sites-enabled/*.backup"
+  become: yes
+  ignore_errors: yes
+  changed_when: false
+
+# 7. Verificar configuración de Nginx
+- name: "Verificar sintaxis de configuración Nginx"
+  command: nginx -t
+  become: yes
+  register: nginx_test
+  changed_when: false
+
+# 8. Mostrar resultado de validación
+- name: "Mostrar resultado de validación de Nginx"
+  debug:
+    msg: |
+      ✅ Configuración de Nginx válida
+      {{ nginx_test.stderr }}
+
+# 9. Verificar que Nginx esté corriendo
+- name: "Verificar estado del servicio Nginx"
+  systemd:
+    name: nginx
+    state: started
+  become: yes
+  register: nginx_status
+
+# 10. Obtener versión de Nginx
+- name: "Obtener versión de Nginx"
+  command: nginx -v
+  register: nginx_version
+  changed_when: false
+
+# 11. Mostrar información de instalación
+- name: "Resumen de configuración de Nginx"
+  debug:
+    msg: |
+      ========================================
+      ✅ Nginx instalado y configurado
+      
+      Versión: {{ nginx_version.stderr }}
+      Estado: {{ nginx_status.status.ActiveState }}
+      
+      Configuración:
+      - Reverse proxy habilitado
+      - Backend: {{ nginx_backend_host }}:{{ nginx_backend_port }}
+      - Puerto: {{ nginx_port }}
+      
+      Acceso:
+      http://{{ ansible_host }}
+      ========================================

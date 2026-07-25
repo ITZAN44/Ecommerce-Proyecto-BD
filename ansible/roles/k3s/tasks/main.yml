@@ -1,0 +1,181 @@
+---
+# ============================================
+# ROLE: k3s
+# ============================================
+# Propósito: Instalar K3s y desplegar aplicación ecommerce
+# ============================================
+
+# ========================================
+# PARTE 1: Instalación de K3s
+# ========================================
+
+- name: "Verificar si K3s ya está instalado"
+  stat:
+    path: /usr/local/bin/k3s
+  register: k3s_binary
+
+- name: "Descargar e instalar K3s"
+  shell: |
+    curl -sfL https://get.k3s.io | sh -
+  when: not k3s_binary.stat.exists
+  become: yes
+  environment:
+    INSTALL_K3S_VERSION: "{{ k3s_version }}"
+
+- name: "Esperar a que K3s esté listo"
+  wait_for:
+    path: /var/lib/rancher/k3s/server/node-token
+    timeout: 120
+  when: not k3s_binary.stat.exists
+  become: yes
+
+- name: "Configurar permisos de kubeconfig"
+  file:
+    path: /etc/rancher/k3s/k3s.yaml
+    mode: '0644'
+  become: yes
+
+- name: "Verificar que K3s esté corriendo"
+  systemd:
+    name: k3s
+    state: started
+    enabled: yes
+  become: yes
+
+# ========================================
+# PARTE 2: Copiar manifiestos de Kubernetes
+# ========================================
+
+- name: "Crear directorio para manifiestos"
+  file:
+    path: "{{ k3s_manifests_dir }}"
+    state: directory
+    owner: "{{ ansible_user }}"
+    group: "{{ ansible_user }}"
+    mode: '0755'
+  become: yes
+
+- name: "Copiar manifiestos de Kubernetes"
+  copy:
+    src: "{{ item }}"
+    dest: "{{ k3s_manifests_dir }}/{{ item | basename }}"
+    owner: "{{ ansible_user }}"
+    group: "{{ ansible_user }}"
+    mode: '0644'
+  loop:
+    - namespace.yaml
+    - postgres-secret.yaml
+    - postgres-pvc.yaml
+    - postgres-deployment.yaml
+    - postgres-service.yaml
+    - app-configmap.yaml
+    - app-deployment.yaml
+    - app-service.yaml
+  become: yes
+
+# ========================================
+# PARTE 3: Aplicar manifiestos en orden
+# ========================================
+
+- name: "Aplicar namespace"
+  command: kubectl apply -f {{ k3s_manifests_dir }}/namespace.yaml
+  become: yes
+  register: namespace_result
+  changed_when: "'created' in namespace_result.stdout or 'configured' in namespace_result.stdout"
+
+- name: "Aplicar secrets de PostgreSQL"
+  command: kubectl apply -f {{ k3s_manifests_dir }}/postgres-secret.yaml
+  become: yes
+  register: secret_result
+  changed_when: "'created' in secret_result.stdout or 'configured' in secret_result.stdout"
+
+- name: "Aplicar PVC de PostgreSQL"
+  command: kubectl apply -f {{ k3s_manifests_dir }}/postgres-pvc.yaml
+  become: yes
+  register: pvc_result
+  changed_when: "'created' in pvc_result.stdout or 'configured' in pvc_result.stdout"
+
+- name: "Aplicar Deployment de PostgreSQL"
+  command: kubectl apply -f {{ k3s_manifests_dir }}/postgres-deployment.yaml
+  become: yes
+  register: postgres_deploy_result
+  changed_when: "'created' in postgres_deploy_result.stdout or 'configured' in postgres_deploy_result.stdout"
+
+- name: "Aplicar Service de PostgreSQL"
+  command: kubectl apply -f {{ k3s_manifests_dir }}/postgres-service.yaml
+  become: yes
+  register: postgres_svc_result
+  changed_when: "'created' in postgres_svc_result.stdout or 'configured' in postgres_svc_result.stdout"
+
+- name: "Esperar a que PostgreSQL esté listo"
+  command: kubectl wait --for=condition=ready pod -l app=postgres -n ecommerce --timeout=180s
+  become: yes
+  register: postgres_wait
+  changed_when: false
+  ignore_errors: yes
+
+- name: "Aplicar ConfigMap de aplicación"
+  command: kubectl apply -f {{ k3s_manifests_dir }}/app-configmap.yaml
+  become: yes
+  register: configmap_result
+  changed_when: "'created' in configmap_result.stdout or 'configured' in configmap_result.stdout"
+
+- name: "Aplicar Deployment de aplicación"
+  command: kubectl apply -f {{ k3s_manifests_dir }}/app-deployment.yaml
+  become: yes
+  register: app_deploy_result
+  changed_when: "'created' in app_deploy_result.stdout or 'configured' in app_deploy_result.stdout"
+
+- name: "Aplicar Service de aplicación"
+  command: kubectl apply -f {{ k3s_manifests_dir }}/app-service.yaml
+  become: yes
+  register: app_svc_result
+  changed_when: "'created' in app_svc_result.stdout or 'configured' in app_svc_result.stdout"
+
+- name: "Esperar a que los pods de la aplicación estén listos"
+  command: kubectl wait --for=condition=ready pod -l app=ecommerce-app -n ecommerce --timeout=180s
+  become: yes
+  register: app_wait
+  changed_when: false
+  ignore_errors: yes
+
+# ========================================
+# PARTE 4: Verificación del deployment
+# ========================================
+
+- name: "Obtener estado de los pods"
+  command: kubectl get pods -n ecommerce -o wide
+  become: yes
+  register: pods_status
+  changed_when: false
+
+- name: "Obtener información de services"
+  command: kubectl get svc -n ecommerce
+  become: yes
+  register: services_status
+  changed_when: false
+
+- name: "Obtener ClusterIP del servicio de la app"
+  shell: kubectl get svc ecommerce-app-service -n ecommerce -o jsonpath='{.spec.clusterIP}'
+  become: yes
+  register: app_clusterip
+  changed_when: false
+
+- name: "Mostrar resumen del deployment"
+  debug:
+    msg: |
+      ========================================
+      ✅ K3s y aplicación desplegados
+      
+      PODS:
+      {{ pods_status.stdout }}
+      
+      SERVICES:
+      {{ services_status.stdout }}
+      
+      ClusterIP de la app: {{ app_clusterip.stdout }}
+      
+      Próximos pasos:
+      - Actualizar Nginx para apuntar a: {{ app_clusterip.stdout }}:80
+      - Verificar: kubectl get all -n ecommerce
+      ========================================

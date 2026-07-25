@@ -1,0 +1,28 @@
+---
+# ============================================
+# Variables por defecto para el rol k3s
+# ============================================
+
+# Versión de K3s a instalar
+k3s_version: "v1.33.6+k3s1"
+
+# Directorio donde se guardarán los manifiestos
+k3s_manifests_dir: "/home/{{ ansible_user }}/k8s-manifests"
+
+# Namespace de Kubernetes
+k3s_namespace: "ecommerce"
+
+# Configuración de la aplicación
+app_name: "ecommerce-app"
+app_replicas: 2
+app_image: "ecommerce-app:1.0.0"
+
+# Configuración de PostgreSQL
+postgres_image: "postgres:16-alpine"
+postgres_storage: "2Gi"
+postgres_db: "ecommerce_db"
+postgres_user: "postgres"
+postgres_password: "12345678"
+
+# Tiempo de espera para pods (segundos)
+pod_wait_timeout: 180

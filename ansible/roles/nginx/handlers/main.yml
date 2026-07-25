@@ -1,0 +1,21 @@
+---
+# ============================================
+# HANDLERS para el rol nginx
+# ============================================
+
+- name: Reload Nginx
+  systemd:
+    name: nginx
+    state: reloaded
+  become: yes
+
+- name: Restart Nginx
+  systemd:
+    name: nginx
+    state: restarted
+  become: yes
+
+- name: Test Nginx Config
+  command: nginx -t
+  become: yes
+  changed_when: false

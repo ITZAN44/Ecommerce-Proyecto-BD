@@ -1,0 +1,18 @@
+# Service para exponer PostgreSQL internamente
+apiVersion: v1
+kind: Service
+metadata:
+  name: postgres
+  namespace: ecommerce
+  labels:
+    app: postgres
+    tier: database
+spec:
+  type: ClusterIP
+  ports:
+  - port: 5432
+    targetPort: 5432
+    protocol: TCP
+    name: postgres
+  selector:
+    app: postgres

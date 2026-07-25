@@ -1,0 +1,29 @@
+---
+# ============================================
+# Variables por defecto para el rol docker
+# ============================================
+# Estas variables pueden ser sobrescritas en:
+# - inventory/group_vars/
+# - playbook
+# - línea de comandos con --extra-vars
+# ============================================
+
+# Versión de Docker (latest = última estable)
+docker_version: "latest"
+
+# Usuario que se agregará al grupo docker
+docker_user: "{{ ansible_user }}"
+
+# Paquetes de Docker a instalar
+docker_packages:
+  - docker-ce
+  - docker-ce-cli
+  - containerd.io
+  - docker-buildx-plugin
+  - docker-compose-plugin
+
+# Habilitar Docker al inicio del sistema
+docker_service_enabled: yes
+
+# Estado del servicio Docker
+docker_service_state: started

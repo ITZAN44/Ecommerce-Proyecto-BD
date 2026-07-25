@@ -1,0 +1,113 @@
+---
+# ============================================
+# PLAYBOOK: Destruir toda la infraestructura
+# ============================================
+# Propósito: Limpiar completamente el sistema
+# Uso: ansible-playbook playbooks/destroy-all.yml
+# ⚠️ CUIDADO: Esto eliminará TODA la configuración
+# ============================================
+
+- name: "🗑️  DESTRUIR INFRAESTRUCTURA COMPLETA"
+  hosts: production
+  become: yes
+  gather_facts: yes
+  
+  tasks:
+    - name: "⚠️  ADVERTENCIA FINAL"
+      pause:
+        prompt: |
+          ╔════════════════════════════════════════════════════════════════╗
+          ║                                                                ║
+          ║            ⚠️  ADVERTENCIA - DESTRUCCIÓN TOTAL ⚠️               ║
+          ║                                                                ║
+          ╚════════════════════════════════════════════════════════════════╝
+          
+          Este playbook eliminará:
+          ❌ Todos los pods de K3s
+          ❌ Base de datos PostgreSQL y datos
+          ❌ Contenedores de Jenkins
+          ❌ Configuración de Nginx
+          ❌ K3s completo
+          ❌ Datos de Jenkins
+          
+          ⚠️  ESTA ACCIÓN NO SE PUEDE DESHACER
+          
+          Presiona Ctrl+C y luego 'A' para ABORTAR
+          Presiona ENTER para CONTINUAR con la destrucción
+    
+    - name: "🗑️  Detener y eliminar contenedores de Jenkins"
+      command: docker compose -f /home/{{ ansible_user }}/jenkins-config/docker-compose.jenkins.yml down -v
+      ignore_errors: yes
+    
+    - name: "🗑️  Eliminar datos de Jenkins"
+      file:
+        path: "{{ item }}"
+        state: absent
+      loop:
+        - /home/{{ ansible_user }}/jenkins
+        - /home/{{ ansible_user }}/jenkins-config
+      ignore_errors: yes
+    
+    - name: "🗑️  Eliminar servicio systemd de Jenkins"
+      file:
+        path: /etc/systemd/system/jenkins-docker.service
+        state: absent
+    
+    - name: "🗑️  Recargar systemd"
+      systemd:
+        daemon_reload: yes
+    
+    - name: "🗑️  Eliminar todos los recursos de K3s"
+      command: kubectl delete namespace ecommerce --force --grace-period=0
+      ignore_errors: yes
+    
+    - name: "🗑️  Desinstalar K3s"
+      shell: /usr/local/bin/k3s-uninstall.sh
+      ignore_errors: yes
+    
+    - name: "🗑️  Eliminar configuración de Nginx"
+      file:
+        path: "{{ item }}"
+        state: absent
+      loop:
+        - /etc/nginx/sites-enabled/ecommerce
+        - /etc/nginx/sites-available/ecommerce
+    
+    - name: "🗑️  Restaurar configuración por defecto de Nginx"
+      file:
+        src: /etc/nginx/sites-available/default
+        dest: /etc/nginx/sites-enabled/default
+        state: link
+      ignore_errors: yes
+    
+    - name: "🔄 Reiniciar Nginx"
+      systemd:
+        name: nginx
+        state: restarted
+      ignore_errors: yes
+    
+    - name: "🗑️  Eliminar manifiestos de K3s"
+      file:
+        path: /home/{{ ansible_user }}/k8s-manifests
+        state: absent
+    
+    - name: "✅ Resumen de destrucción"
+      debug:
+        msg: |
+          ════════════════════════════════════════════════════════════════
+          ✅ INFRAESTRUCTURA DESTRUIDA
+          
+          Eliminado:
+          ✓ Jenkins y datos
+          ✓ K3s y todos los pods
+          ✓ Configuración de Nginx (restaurado a default)
+          ✓ Manifiestos de Kubernetes
+          
+          Conservado:
+          ✓ Docker Engine (para reutilizar)
+          ✓ Nginx (sin configuración personalizada)
+          
+          Próximos pasos:
+          - Para reconstruir todo: ansible-playbook playbooks/deploy-all.yml
+          - Para desinstalar Docker: sudo apt remove docker-ce docker-ce-cli
+          ════════════════════════════════════════════════════════════════

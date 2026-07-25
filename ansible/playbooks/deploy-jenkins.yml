@@ -1,0 +1,81 @@
+---
+# ============================================
+# PLAYBOOK: Instalar Jenkins
+# ============================================
+# Propósito: Instalar Jenkins con integración K3s
+# Uso: ansible-playbook playbooks/deploy-jenkins.yml
+# ============================================
+
+- name: "Instalar y configurar Jenkins"
+  hosts: production
+  become: yes
+  gather_facts: yes
+  
+  pre_tasks:
+    - name: "Verificar que Docker esté instalado"
+      command: docker --version
+      register: docker_check
+      failed_when: docker_check.rc != 0
+      changed_when: false
+      when: not ansible_check_mode
+      
+    - name: "Verificar que K3s esté instalado"
+      command: kubectl version --client
+      register: k3s_check
+      failed_when: k3s_check.rc != 0
+      changed_when: false
+      become: yes
+      when: not ansible_check_mode
+      
+    - name: "Información de requisitos"
+      debug:
+        msg: |
+          ✅ Iniciando instalación de Jenkins
+          
+          Modo: {{ 'Simulación (--check)' if ansible_check_mode else 'Ejecución real' }}
+          Host: {{ inventory_hostname }}
+          
+          Requisitos previos: Docker y K3s
+  
+  roles:
+    - jenkins
+  
+  post_tasks:
+    - name: "Esperar 10 segundos para que Jenkins termine de iniciar"
+      pause:
+        seconds: 10
+        
+    - name: "Verificar que Jenkins responda"
+      uri:
+        url: "http://localhost:{{ jenkins_port }}/login"
+        method: GET
+        status_code: [200, 403]
+      register: jenkins_health
+      ignore_errors: yes
+      retries: 3
+      delay: 5
+      
+    - name: "Resumen final de instalación"
+      debug:
+        msg: |
+          ========================================
+          ✅ Jenkins instalado correctamente
+          
+          🌐 Acceso:
+          http://{{ ansible_host }}:{{ jenkins_port }}
+          
+          🔐 Setup inicial:
+          1. Acceder a Jenkins en el navegador
+          2. Ingresar password inicial (mostrado arriba)
+          3. Instalar plugins recomendados
+          4. Crear usuario administrador
+          
+          ⚙️ Configuración K3s:
+          - Kubeconfig ya montado en /root/.kube/config
+          - Puedes usar kubectl en pipelines
+          
+          📝 Comandos útiles:
+          docker logs jenkins -f
+          docker exec jenkins kubectl get nodes
+          systemctl status jenkins-docker
+          ========================================

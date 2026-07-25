@@ -1,0 +1,70 @@
+---
+# ============================================
+# PLAYBOOK: Desplegar K3s + Aplicación
+# ============================================
+# Propósito: Instalar K3s y desplegar ecommerce completo
+# Uso: ansible-playbook playbooks/deploy-k3s.yml
+# ============================================
+
+- name: "Desplegar K3s y aplicación ecommerce"
+  hosts: production
+  become: yes
+  gather_facts: yes
+  
+  pre_tasks:
+    - name: "Verificar que Docker esté instalado"
+      command: docker --version
+      register: docker_check
+      failed_when: docker_check.rc != 0
+      changed_when: false
+      
+    - name: "Mostrar advertencia de tiempo de ejecución"
+      debug:
+        msg: |
+          ⚠️ ATENCIÓN: Este playbook puede tomar 5-10 minutos
+          
+          Pasos a ejecutar:
+          1. Instalar K3s (~2 min)
+          2. Copiar manifiestos
+          3. Desplegar PostgreSQL (~1-2 min)
+          4. Desplegar aplicación con 2 réplicas (~2-3 min)
+          5. Verificar estado de pods
+          
+          Por favor espera...
+  
+  roles:
+    - k3s
+  
+  post_tasks:
+    - name: "Verificar que todos los pods estén corriendo"
+      command: kubectl get pods -n ecommerce --no-headers
+      become: yes
+      register: all_pods
+      changed_when: false
+      
+    - name: "Contar pods Running"
+      set_fact:
+        running_pods: "{{ all_pods.stdout_lines | select('search', 'Running') | list | length }}"
+        total_pods: "{{ all_pods.stdout_lines | length }}"
+    
+    - name: "Resumen final del deployment"
+      debug:
+        msg: |
+          ========================================
+          ✅ K3s y aplicación desplegados
+          
+          📊 Estado:
+          - Pods Running: {{ running_pods }}/{{ total_pods }}
+          - Namespace: ecommerce
+          - Réplicas de app: 2
+          
+          🔗 Próximos pasos:
+          1. Actualizar variable nginx_backend_host en inventory/group_vars/production.yml
+          2. Ejecutar: ansible-playbook playbooks/deploy-nginx.yml
+          3. Acceder a: http://{{ ansible_host }}
+          
+          📝 Comandos útiles:
+          kubectl get all -n ecommerce
+          kubectl logs -n ecommerce -l app=ecommerce-app
+          kubectl describe pod <pod-name> -n ecommerce
+          ========================================

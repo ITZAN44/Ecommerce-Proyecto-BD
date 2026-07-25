@@ -1,0 +1,32 @@
+---
+# ============================================
+# PLAYBOOK: Instalar Docker
+# ============================================
+# Propósito: Instalar Docker Engine + Docker Compose en servidores
+# Uso: ansible-playbook -i inventory/hosts.ini playbooks/deploy-docker.yml
+# ============================================
+
+- name: "Instalar y configurar Docker"
+  hosts: production  # Solo en servidores de producción
+  become: yes        # Ejecutar tareas con sudo
+  gather_facts: yes  # Recolectar información del sistema
+  
+  roles:
+    - docker
+  
+  post_tasks:
+    - name: "Resumen de instalación"
+      debug:
+        msg: |
+          ========================================
+          ✅ Docker instalado correctamente
+          
+          Host: {{ inventory_hostname }}
+          
+          Próximos pasos:
+          1. Cerrar sesión SSH: exit
+          2. Volver a conectar: ssh {{ ansible_user }}@{{ ansible_host }}
+          3. Verificar: docker ps
+          
+          ¡Docker listo para usar! 🐳
+          ========================================

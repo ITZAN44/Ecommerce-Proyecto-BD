@@ -1,0 +1,37 @@
+version: '3.8'
+
+services:
+  jenkins:
+    image: jenkins/jenkins:{{ jenkins_version }}
+    container_name: jenkins
+    restart: unless-stopped
+    user: root
+    ports:
+      - "{{ jenkins_port }}:8080"
+      - "50000:50000"
+    volumes:
+      - {{ jenkins_home_dir }}/jenkins_home:/var/jenkins_home
+      - /var/run/docker.sock:/var/run/docker.sock
+      - {{ jenkins_home_dir }}/kubeconfig:/root/.kube/config:ro
+    environment:
+      - JENKINS_OPTS=--prefix=/jenkins
+      - JAVA_OPTS=-Djenkins.install.runSetupWizard=true
+    networks:
+      - {{ jenkins_network_name }}
+
+  jenkins-agent:
+    image: jenkins/inbound-agent:latest
+    container_name: jenkins-agent
+    restart: unless-stopped
+    environment:
+      - JENKINS_URL=http://jenkins:8080
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+    networks:
+      - {{ jenkins_network_name }}
+    depends_on:
+      - jenkins
+
+networks:
+  {{ jenkins_network_name }}:
+    driver: bridge

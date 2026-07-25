@@ -1,0 +1,21 @@
+---
+# ============================================
+# Variables por defecto para el rol jenkins
+# ============================================
+
+# Puerto de Jenkins
+jenkins_port: 8080
+
+# Directorios
+jenkins_home_dir: "/home/{{ ansible_user }}/jenkins"
+jenkins_config_dir: "/home/{{ ansible_user }}/jenkins-config"
+jenkins_data_dir: "{{ jenkins_home_dir }}/jenkins_home"
+
+# Versión de Jenkins
+jenkins_version: "lts"
+
+# Configuración de red
+jenkins_network_name: "jenkins_network"
+
+# Auto-start con systemd
+jenkins_systemd_enabled: yes

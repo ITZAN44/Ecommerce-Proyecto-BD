@@ -1,0 +1,15 @@
+---
+# ============================================
+# HANDLERS para el rol k3s
+# ============================================
+
+- name: Restart K3s
+  systemd:
+    name: k3s
+    state: restarted
+  become: yes
+
+- name: Reload K3s manifests
+  command: kubectl apply -f {{ k3s_manifests_dir }}/
+  become: yes
+  changed_when: false

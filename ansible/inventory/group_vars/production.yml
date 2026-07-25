@@ -1,0 +1,31 @@
+---
+# Variables específicas para el grupo 'production'
+# Estas variables SOLO se aplican a servidores en [production]
+
+# ==================================================
+# CREDENCIALES (⚠️ NO COMMITEAR A GIT)
+# ==================================================
+# En producción real, usar Ansible Vault para encriptar:
+# ansible-vault encrypt group_vars/production.yml
+
+db_password: "12345678"
+
+# ==================================================
+# CONFIGURACIÓN ESPECÍFICA DE PRODUCCIÓN
+# ==================================================
+environment: "production"
+debug_mode: false
+
+# Resource limits para Docker
+app_memory_limit: "512M"
+app_cpu_limit: "1"
+db_memory_limit: "512M"
+db_cpu_limit: "1"
+
+# Configuración de backup
+backup_enabled: true
+backup_retention_days: 7
+
+# Configuración de logs
+log_level: "info"
+log_retention_days: 30
