@@ -2,40 +2,41 @@
 
 /* ===== SISTEMA DE COLORES DARK PROFESIONAL ===== */
 :root {
-  /* Backgrounds - Dark claros profesionales */
-  --bg-primary: #1a1d29;      /* Fondo principal */
-  --bg-secondary: #22252f;    /* Cards, modales */
-  --bg-tertiary: #2a2d37;     /* Hover states */
-  --bg-hover: #32353f;        /* Hover interactivo */
-  
-  /* Text - Alta legibilidad */
-  --text-primary: #f3f4f6;    /* Texto principal - MÁS BRILLANTE */
-  --text-secondary: #d1d5db;  /* Texto secundario - MÁS VISIBLE */
-  --text-tertiary: #9ca3af;   /* Texto terciario */
-  --text-muted: #6b7280;      /* Texto deshabilitado */
-  
-  /* Borders - Más visibles */
-  --border-color: #4b5563;    /* Border principal - MÁS VISIBLE */
-  --border-primary: #374151;
-  --border-secondary: #4b5563;
-  
-  /* Accent Colors - Profesionales y sutiles */
-  --accent-blue: #3b82f6;     /* Acciones principales */
-  --accent-blue-hover: #2563eb;
-  --accent-green: #10b981;    /* Success */
-  --accent-green-hover: #059669;
-  --accent-red: #ef4444;      /* Danger/Delete */
-  --accent-red-hover: #dc2626;
-  --accent-yellow: #f59e0b;   /* Warning */
-  --accent-yellow-hover: #d97706;
-  --accent-purple: #8b5cf6;   /* Info/Special */
-  --accent-purple-hover: #7c3aed;
-  
+  /* ===== Paleta "Indigo Premium" — índigo/violeta + teal + rosa ===== */
+  /* Backgrounds - Índigo-carbón con tinte violeta, no gris plano */
+  --bg-primary: #1a1830;      /* Fondo principal */
+  --bg-secondary: #232145;    /* Cards, modales */
+  --bg-tertiary: #2e2b5a;     /* Hover states */
+  --bg-hover: #393675;        /* Hover interactivo */
+
+  /* Text - Cálido, alta legibilidad */
+  --text-primary: #f4f3ff;    /* Texto principal */
+  --text-secondary: #cdc9ee;  /* Texto secundario */
+  --text-tertiary: #9d98c9;   /* Texto terciario */
+  --text-muted: #726da0;      /* Texto deshabilitado */
+
+  /* Borders */
+  --border-color: #3d3a6b;    /* Border principal */
+  --border-primary: #322f5c;
+  --border-secondary: #494580;
+
+  /* Accent Colors - Signature violeta + teal + rosa + oro */
+  --accent-blue: #7c6bff;     /* Acciones principales (violeta) */
+  --accent-blue-hover: #9385ff;
+  --accent-green: #2dd4bf;    /* Success (teal) */
+  --accent-green-hover: #5eead4;
+  --accent-red: #fb6f92;      /* Danger/Delete (rosa coral) */
+  --accent-red-hover: #ff8fab;
+  --accent-yellow: #ffca3a;   /* Warning (oro cálido) */
+  --accent-yellow-hover: #ffd866;
+  --accent-purple: #22d3ee;   /* Info/Special (cyan) */
+  --accent-purple-hover: #67e8f9;
+
   /* Status Colors */
-  --status-success: #10b981;
-  --status-warning: #f59e0b;
-  --status-error: #ef4444;
-  --status-info: #3b82f6;
+  --status-success: #2dd4bf;
+  --status-warning: #ffca3a;
+  --status-error: #fb6f92;
+  --status-info: #7c6bff;
   
   /* Shadows - Profundidad sutil */
   --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
