@@ -149,6 +149,30 @@ En el flujo crear → pagar, el stock físico (`stock.cantidad_en_stock`) **nunc
 
 ---
 
+## 🖥️ Frontend / UI
+
+> Bugs visuales detectados el 2026-07-25 al capturar la UI para una landing de promoción (no estaban en la auditoría estática; salieron al ver las pantallas renderizadas).
+
+### V2 — El dashboard mostraba `$NaN` en "Productos Más Vendidos"
+**Severidad** 🟡 · **Estado** `Resuelto` (2026-07-25)
+
+`src/pages/index.astro` leía `producto.total_ventas` y `producto.cantidad_vendida`, pero la matview `mv_productos_top_ventas` **no expone esos nombres**: las columnas reales (verificadas en la base viva) son `ingresos_totales` y `total_vendido`. `parseFloat(undefined)` → `NaN` → se renderizaba "$NaN vendidos".
+
+**Resuelto**: `index.astro:206,209` ahora usan `producto.ingresos_totales` y `producto.total_vendido`. Verificado a la vista: el #1 muestra `$840 / 7 vendidos`.
+
+### V3 — Código CSS filtrado como texto en la tabla de Pedidos
+**Severidad** 🟡 · **Estado** `Resuelto` (2026-07-25)
+
+`src/pages/pedidos/index.astro:234` tenía un fragmento duplicado (`ar(--bg-secondary); border-color: var(--border-color);">`) pegado tras el cierre del `<tbody>`, que se renderizaba como texto plano sobre la tabla.
+
+**Resuelto**: se eliminó el fragmento sobrante; el `<tbody>` quedó con un único `style` válido.
+
+> **Nota de datos (no es bug)**: las tarjetas "Ventas Hoy / Ventas del Mes" muestran `$0` porque `fn_estadisticas_dashboard` filtra por `CURRENT_DATE` / mes actual, y todos los pedidos del seed son de nov–dic 2025. Es dato correcto, no un defecto.
+
+> **Gotcha DevOps (para el deploy)**: `docker-compose.yml` monta `.:/app` (bind mount de dev). Eso **tapa el `dist/` de la imagen con el del host**, así que rebuildear la imagen no basta: hay que `npm run build` en el host. En Render/producción se usa el `Dockerfile` sin bind mount, así que el `dist/` de la imagen (con estos fixes) sí se sirve.
+
+---
+
 ## 🔎 Sub-hallazgos por verificar (no accionar sin confirmar)
 
 *(Ninguno pendiente por ahora — V1 se confirmó arriba. Ver también D3 y D4, marcados `Verificar`.)*
