@@ -2,7 +2,21 @@
 
 > Issues detectados durante la auditoría, separados de la documentación descriptiva.
 > La doc (`explanation/`) describe **cómo ES** el sistema; este archivo lista **qué conviene arreglar**.
-> Cada issue cita su fuente real. Fecha de corte: 2026-07-23.
+> Cada issue cita su fuente real. Fecha de corte inicial: 2026-07-23 · última actualización: **2026-07-26**.
+
+## Estado del plan (2026-07-26)
+
+**15 issues: 4 resueltos · 11 abiertos.**
+
+| Bloque | Abiertos |
+|---|---|
+| 🔴 Seguridad | S1, S2 |
+| 🟡 Arquitectura y DevOps | A1, A2, A3, A4, C1 |
+| 🟢 Código muerto y limpieza | D1, D2, D3, D4 |
+| ☁️ Deploy | H1, H2, H3 |
+| ✅ Resueltos | DOC1, V1, V2, V3 |
+
+> **Nota importante**: la pasada de herramientas del 2026-07-24 (semgrep, gitleaks, hadolint, kubeconform, ansible-lint) fue de **verificación, no de remediación** — cruzó hallazgos con una 2ª fuente, pero **no corrigió ninguno**. Además, ninguna de esas herramientas cubre D1–D4: el código muerto en PostgreSQL no lo detecta un SAST de código de aplicación. **A la fecha no se ejecutó ninguna limpieza de código muerto.**
 
 ## Leyenda
 
@@ -91,6 +105,11 @@ Confirmado por **triple cruce** (endpoints `api/`, páginas `.astro`, y llamadas
 
 > Eran **9**: `sp_actualizar_stock_compra` salió de la lista el 2026-07-24 al cablearse en `sp_procesar_pago` (resolución de **V1**); ya no es código muerto.
 
+> **Reconfirmado el 2026-07-26** (doble cruce, ninguna acción de limpieza ejecutada aún):
+> - **Código**: búsqueda de las 8 rutinas en todo `src/` → **0 coincidencias**.
+> - **Base viva**: barrido de `pg_get_functiondef` sobre las rutinas de `public` buscando llamadas cruzadas → **0 llamadas** para las 8.
+> Las 8 siguen existiendo en `ecommerce_db` y nadie las invoca.
+
 **Remediación**: decidir por rutina — eliminar, o cablearla a un endpoint/página si se pensaba usar.
 
 ### D2 — Las vistas materializadas se refrescan a mano
@@ -101,18 +120,32 @@ Confirmado por **triple cruce** (endpoints `api/`, páginas `.astro`, y llamadas
 **Remediación**: refrescar por schedule (cron/pg_cron) o al escribir los datos que las alimentan, no depender de un POST manual.
 
 ### D3 — Redundancia de auditoría
-**Severidad** 🟢 · **Estado** `Verificar`
+**Severidad** 🟢 · **Estado** `Abierto` (confirmado el 2026-07-26; ya no es `Verificar`)
 
-Coexisten 8 `fn_auditoria_<tabla>` específicas **y** `fn_auditoria_generica` con la misma lógica. Probable código muerto en una de las dos vías.
+Coexisten funciones de auditoría específicas por tabla **y** `fn_auditoria_generica` con la misma lógica. Se confirmó cuál de las dos vías es la muerta.
 
-**Remediación**: confirmar qué trigger está realmente enganchado por tabla; unificar en la vía genérica y eliminar la redundante.
+**Confirmado contra la base viva** (`pg_trigger ⨝ pg_class ⨝ pg_proc`, 2026-07-26):
+
+- Hay **7** funciones `fn_auditoria_<tabla>` y las **7 están enganchadas** a su trigger: `categorias`, `clientes`, `cupones`, `pagos`, `pedidos`, `productos`, `stock`.
+- `fn_auditoria_generica` **existe pero no está enganchada a ningún trigger** → **es la vía muerta**.
+
+> **Corrección al texto previo**: este issue decía "8 `fn_auditoria_<tabla>` específicas". Son **7**. El total de 8 salía de contar `fn_auditoria_generica` dentro del grupo.
+
+**Remediación**: eliminar `fn_auditoria_generica` (nadie la usa), o —si se prefiere la vía genérica— migrar los 7 triggers a ella y borrar las 7 específicas. Hoy la redundancia es 7 activas + 1 muerta.
 
 ### D4 — Scripts de init de BD por subcarpetas no se ejecutan solos
-**Severidad** 🟢 · **Estado** `Verificar`
+**Severidad** 🟢 · **Estado** `Abierto` (confirmado el 2026-07-26; ya no es `Verificar`)
 
 `database/fase1|2|3` se montan en `docker-entrypoint-initdb.d`, pero Postgres **no ejecuta subdirectorios recursivamente** → esas fases no corren en el init automático. Las 49 rutinas existen igual (vía `functions_procedures_LIMPIO.sql` / `backup_bd_real.sql`).
 
-**Remediación**: aplanar los scripts al nivel que Postgres sí ejecuta, o cargar por un orquestador explícito. Confirmar antes qué scripts se cargan hoy realmente.
+**Confirmado por lectura directa de `docker-compose.yml` (2026-07-26)** — qué se monta realmente:
+
+- **Se ejecutan** (archivos `.sql` planos, `docker-compose.yml:17-20`): `init.sql` → `01_init.sql`, `schema.sql`, `functions_procedures_LIMPIO.sql`, `backup_bd_real.sql`.
+- **NO se ejecutan** (directorios, `docker-compose.yml:21-23`): `fase1`, `fase2`, `fase3`.
+
+> **Sub-hallazgo (SIN VERIFICAR el impacto)**: los 4 `.sql` planos corren en **orden alfabético** (`01_init.sql`, `backup_bd_real.sql`, `functions_procedures_LIMPIO.sql`, `schema.sql`), no en el orden lógico esquema→funciones→datos. No se comprobó si ese orden produce errores o si el resultado final es equivalente.
+
+**Remediación**: aplanar los scripts al nivel que Postgres sí ejecuta (con prefijo numérico que fije el orden), o cargar por un orquestador explícito.
 
 ---
 
@@ -173,6 +206,51 @@ En el flujo crear → pagar, el stock físico (`stock.cantidad_en_stock`) **nunc
 
 ---
 
+## ☁️ Deploy a hosting gestionado (Render + Neon)
+
+> Hallazgos del 2026-07-26 al evaluar el despliegue en **Render** (app) + **Neon** (PostgreSQL gestionado).
+> Son específicos de una base gestionada; **no afectan al entorno local con Docker**, donde todo funciona.
+> Objetivo elegido: Render (Docker, free tier) + Neon (Postgres free tier).
+
+### H1 — `db.ts` no está preparado para una base gestionada (bloquea el deploy)
+**Severidad** 🔴 · **Estado** `Abierto`
+
+`src/lib/db.ts` configura el `Pool` para un Postgres local en la misma red. Tres puntos lo hacen incompatible con Neon (verificados por lectura directa del archivo, 2026-07-26):
+
+| # | Punto | Fuente | Por qué rompe con Neon |
+|---|---|---|---|
+| a | **No hay opción `ssl`** en el `Pool` | `db.ts:6-15` | Neon exige TLS. Sin `ssl`, la conexión **falla**. Es el bloqueante duro. |
+| b | `connectionTimeoutMillis: 2000` | `db.ts:14` | Neon duerme la base tras inactividad; despertarla puede exceder 2 s → la primera visita falla. |
+| c | `pool.on('error', …)` hace `process.exit(-1)` | `db.ts:28-31` | Un error de conexión ocioso (habitual cuando Neon escala a cero) **termina el proceso del servidor entero**. |
+
+**Remediación**: (a) SSL condicional por variable de entorno para no romper el entorno local sin TLS; (b) subir el timeout de conexión; (c) registrar el error del pool sin matar el proceso.
+
+> **Aclaración**: (c) es un problema de robustez que existe hoy también en local — con Neon simplemente pasa de improbable a esperable.
+
+### H2 — La base viva diverge del dump versionado
+**Severidad** 🟡 · **Estado** `Abierto`
+
+`database/backup_bd_real.sql` **ya no refleja** la base viva `ecommerce_db`. Cambios aplicados a la base y no re-exportados:
+
+- El fix de **V1** (`CALL sp_actualizar_stock_compra` dentro de `sp_procesar_pago`), aplicado el 2026-07-24.
+- Limpieza de datos de prueba del 2026-07-25 (nombres de clientes y productos, SKUs, categoría `COMIDA`→`Alimentos`, baja de un producto y una categoría huérfanos).
+
+**Impacto en el deploy**: la carga inicial de Neon se hace desde el dump. Si se sube el dump actual, la base en la nube arranca **sin el fix de V1 y con los datos de prueba**.
+
+**Remediación**: re-exportar el dump (`exportar_bd.ps1`) **antes** de cargar Neon, y volver a versionarlo.
+
+### H3 — Estado del despliegue
+**Severidad** 🟢 · **Estado** `Abierto`
+
+El proyecto **NO está deployado**: no hay URL pública (`NO CONFIRMADO`). Corre en `http://localhost:4321`, local y vía Docker.
+
+> **Nota de alcance**: los issues de infra **A1, A3, A4 y C1** son de Kubernetes, Jenkins y Ansible. Render **no usa ninguna de esas piezas**, así que no bloquean este despliegue; siguen abiertos para la vía K3s/Jenkins.
+
+> **Nota sobre S1 y el repo público**: el remoto `github.com/ITZAN44/Ecommerce-Proyecto-BD` es **público** (verificado con `gh repo view`, 2026-07-26). Las credenciales de S1 son visibles para cualquiera. No bloquea el deploy (Render inyecta sus propias variables y las de Neon son distintas), pero publicar una URL le da visibilidad al repo. Refuerza la prioridad de **S1**.
+
+---
+
 ## 🔎 Sub-hallazgos por verificar (no accionar sin confirmar)
 
-*(Ninguno pendiente por ahora — V1 se confirmó arriba. Ver también D3 y D4, marcados `Verificar`.)*
+- **D3 y D4 dejaron de ser `Verificar`** el 2026-07-26: ambos quedaron confirmados contra la base viva y `docker-compose.yml`. Pasaron a `Abierto` (falta accionarlos, no verificarlos).
+- **Pendiente de verificar**: el orden alfabético de carga de los `.sql` de init (ver sub-hallazgo en **D4**) — no se comprobó si produce errores o si el resultado final es equivalente.
