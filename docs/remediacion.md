@@ -6,22 +6,23 @@
 
 ## Estado del plan (2026-07-26)
 
-**15 issues: 4 resueltos · 11 abiertos.**
+**15 issues: 4 resueltos · 1 riesgo aceptado · 10 abiertos.**
 
 | Bloque | Abiertos |
 |---|---|
-| 🔴 Seguridad | S1, S2 |
+| 🔴 Seguridad | S2 |
 | 🟡 Arquitectura y DevOps | A1, A2, A3, A4, C1 |
 | 🟢 Código muerto y limpieza | D1, D2, D3, D4 |
 | ☁️ Deploy | H1, H2, H3 |
 | ✅ Resueltos | DOC1, V1, V2, V3 |
+| 🤝 Riesgo aceptado | S1 (credenciales LAN ya públicas — ver decisión del 2026-07-27) |
 
 > **Nota importante**: la pasada de herramientas del 2026-07-24 (semgrep, gitleaks, hadolint, kubeconform, ansible-lint) fue de **verificación, no de remediación** — cruzó hallazgos con una 2ª fuente, pero **no corrigió ninguno**. Además, ninguna de esas herramientas cubre D1–D4: el código muerto en PostgreSQL no lo detecta un SAST de código de aplicación. **A la fecha no se ejecutó ninguna limpieza de código muerto.**
 
 ## Leyenda
 
 - **Severidad**: 🔴 Alta · 🟡 Media · 🟢 Baja
-- **Estado**: `Abierto` · `En curso` · `Resuelto` · `Verificar` (falta confirmar antes de accionar)
+- **Estado**: `Abierto` · `En curso` · `Resuelto` · `Verificar` (falta confirmar antes de accionar) · `Riesgo aceptado` (evaluado y no se acciona, con fundamento y condición de disparo)
 
 ## Verificaciones automáticas (2026-07-24)
 
@@ -36,16 +37,62 @@ Pasada de herramientas SAST/lint (vía Docker) para cruzar los hallazgos con una
 ## 🔴 Seguridad
 
 ### S1 — Credenciales en texto plano commiteadas
-**Severidad** 🔴 · **Estado** `Abierto`
+**Severidad** 🟡 (reevaluada desde 🔴) · **Estado** `Riesgo aceptado` (decisión del 2026-07-27)
 
-Secretos versionados en el repo, en claro:
-- `k8s/postgres-secret.yaml:9-11` → `stringData` con `ecommerce_user` / `ecommerce_secure_2024`. El propio archivo lo admite: *"En producción real usa Sealed Secrets o Vault"* (`postgres-secret.yaml:2`).
-- `docker-compose.yml` → password `12345678` en claro.
-- `ansible/inventory/hosts.ini` → IP real `192.168.0.119` + usuario `clark`.
+Credenciales versionadas en claro. **Ya son públicas**: el repo `github.com/ITZAN44/Ecommerce-Proyecto-BD` es abierto (verificado con `gh repo view`) y los commits están publicados. Los valores se consideran **quemados y permanentes** — están en el historial de git y en cualquier fork.
 
-**Remediación**: mover secretos a Sealed Secrets / Vault (o al menos fuera del control de versiones); parametrizar inventario Ansible con variables/vault. Rotar credenciales expuestas.
+> Los valores concretos **no se transcriben acá** para no seguir replicándolos. Se identifican por ubicación.
 
-> **Cruce con gitleaks (2026-07-24)**: gitleaks NO marcó estos secretos porque son de **baja entropía** (contraseñas de config), fuera de su modelo de detección (tokens/API keys de alta entropía). El hallazgo se sostiene por lectura directa de los archivos citados; gitleaks solo aporta que **no hay además** tokens/keys de alta entropía filtrados.
+#### Alcance real: 28 archivos, no 3
+
+El registro original listaba 3 archivos. Un barrido sobre todo el árbol trackeado (2026-07-27) encontró **28**. Los relevantes:
+
+| Categoría | Archivos | Qué contiene |
+|---|---|---|
+| Config activa | `docker-compose.yml`, `k8s/postgres-secret.yaml`, `ansible/inventory/hosts.ini`, `ansible/inventory/group_vars/{all,production}.yml`, `ansible/roles/k3s/{defaults/main.yml,files/postgres-secret.yaml}`, `exportar_bd.ps1`, `audit/tools/.tbls.yml` | password de BD, password de k8s, IP y usuario de la VM |
+| Documentación | `docs/explanation/devops/arquitectura.md`, `audit/HERRAMIENTAS.md`, **este mismo archivo** (antes de esta redacción), 12 archivos en `docs/_legacy/` | los mismos valores, citados como ejemplo |
+| Falso positivo | `jenkins/kubeconfig` | **No es filtración**: son 3 líneas de comentario, una plantilla sin certificados ni tokens (verificado por lectura directa) |
+
+> `database/backup_bd_real.sql` matchea la cadena de la password, pero **SIN VERIFICAR** si es la credencial o un dato de la base (un importe, un teléfono). No se pudo inspeccionar.
+
+#### Evaluación de riesgo (2026-07-27)
+
+| Valor filtrado | Riesgo real |
+|---|---|
+| IP `192.168.x.x` de la VM | **Nulo desde internet** — rango privado RFC 1918, no enrutable |
+| Password de Postgres | **Casi nulo** — sin entropía; está en el top-10 de cualquier diccionario, un atacante la probaría igual |
+| Password del Secret de k8s | Nulo — el cluster corre en esa VM de LAN |
+| Usuario SSH de la VM | Bajo, pero es el dato **más duradero**: las passwords se cambian, los usuarios no |
+
+**Conclusión**: sin exposición a internet no hay superficie de ataque. El riesgo práctico hoy es cercano a cero.
+
+#### Decisión: aceptar el riesgo, no rotar
+
+Se decidió **no rotar** estas credenciales. Fundamento:
+
+1. Toda la infraestructura afectada es **local/LAN**, sin IP pública.
+2. La password no tiene entropía: rotarla no cambia el modelo de amenaza mientras siga en LAN.
+3. **El costo excede el beneficio**: rotar rompe la VM de pruebas, Ansible, K3s y Jenkins, y obliga a re-sincronizar toda la capa DevOps, a cambio de una ganancia de seguridad nula.
+
+**La frontera de seguridad se traza en el borde de internet**, no en el repo:
+
+- Lo de LAN queda como está — riesgo aceptado y fundamentado.
+- **Todo lo que toque internet (Neon, Render) usa credenciales nuevas de alta entropía que NUNCA entran al repo.** El connection string de Neon es el activo a proteger: alta entropía, alcanzable desde internet y con datos reales. Si ese se filtra, sí es incidente.
+
+**Condición de disparo para rotar** (revisar si ocurre alguna):
+
+- La VM se expone hacia afuera (port forwarding, túnel tipo ngrok, VPN mal configurada).
+- La VM se migra a un proveedor cloud con IP pública.
+- Se detecta reutilización de ese usuario/password en algún servicio alcanzable.
+
+#### Medidas preventivas (hacia adelante)
+
+- ✅ **Aplicado**: `docker-compose.yml` toma las credenciales de `.env` (ignorado por git), con la convención `DB_*` de `src/lib/db.ts`. `k8s/postgres-secret.yaml` y `ansible/inventory/hosts.ini` quedaron como plantillas sin valores reales.
+- ✅ **Aplicado**: valores redactados en este documento.
+- ⬜ **Pendiente recomendado**: hook de `gitleaks` en pre-commit. Es la medida de mayor valor: ataja el connection string de Neon —alta entropía, sí detectable— antes de que se commitee por accidente.
+- ⬜ **Pendiente**: los otros 26 archivos siguen conteniendo los valores. Al estar el riesgo aceptado, limpiarlos es cosmético (no revierte el historial público); se deja como tarea de higiene de baja prioridad.
+
+> **Cruce con gitleaks (2026-07-24)**: gitleaks NO marcó estos secretos porque son de **baja entropía** (contraseñas de config), fuera de su modelo de detección (tokens/API keys de alta entropía). El hallazgo se sostiene por lectura directa de los archivos citados; gitleaks solo aporta que **no hay además** tokens/keys de alta entropía filtrados. Esa misma limitación es la razón por la que el hook propuesto **sí** serviría para Neon.
 
 ### S2 — `hash_contrasena` no es un hash y no hay login real
 **Severidad** 🔴 (nombre engañoso) / contexto académico · **Estado** `Abierto`
