@@ -2,20 +2,22 @@
 
 > Issues detectados durante la auditoría, separados de la documentación descriptiva.
 > La doc (`explanation/`) describe **cómo ES** el sistema; este archivo lista **qué conviene arreglar**.
-> Cada issue cita su fuente real. Fecha de corte inicial: 2026-07-23 · última actualización: **2026-07-26**.
+> Cada issue cita su fuente real. Fecha de corte inicial: 2026-07-23 · última actualización: **2026-07-27**.
 
-## Estado del plan (2026-07-26)
+## Estado del plan (2026-07-27)
 
-**15 issues: 4 resueltos · 1 riesgo aceptado · 10 abiertos.**
+**15 issues: 5 resueltos · 1 riesgo aceptado · 9 abiertos.**
 
 | Bloque | Abiertos |
 |---|---|
 | 🔴 Seguridad | S2 |
 | 🟡 Arquitectura y DevOps | A1, A2, A3, A4, C1 |
 | 🟢 Código muerto y limpieza | D1, D2, D3, D4 |
-| ☁️ Deploy | H1, H2, H3 |
-| ✅ Resueltos | DOC1, V1, V2, V3 |
+| ☁️ Deploy | H2, H3 |
+| ✅ Resueltos | DOC1, V1, V2, V3, H1 |
 | 🤝 Riesgo aceptado | S1 (credenciales LAN ya públicas — ver decisión del 2026-07-27) |
+
+> **Bloqueante duro del deploy: levantado.** Con H1 resuelto, ya no queda ningún impedimento técnico para conectar a Neon. H2 sigue abierto y condiciona **qué datos** llegan a la nube, no si la conexión funciona.
 
 > **Nota importante**: la pasada de herramientas del 2026-07-24 (semgrep, gitleaks, hadolint, kubeconform, ansible-lint) fue de **verificación, no de remediación** — cruzó hallazgos con una 2ª fuente, pero **no corrigió ninguno**. Además, ninguna de esas herramientas cubre D1–D4: el código muerto en PostgreSQL no lo detecta un SAST de código de aplicación. **A la fecha no se ejecutó ninguna limpieza de código muerto.**
 
@@ -260,19 +262,39 @@ En el flujo crear → pagar, el stock físico (`stock.cantidad_en_stock`) **nunc
 > Objetivo elegido: Render (Docker, free tier) + Neon (Postgres free tier).
 
 ### H1 — `db.ts` no está preparado para una base gestionada (bloquea el deploy)
-**Severidad** 🔴 · **Estado** `Abierto`
+**Severidad** 🔴 · **Estado** `Resuelto` (2026-07-27)
 
-`src/lib/db.ts` configura el `Pool` para un Postgres local en la misma red. Tres puntos lo hacen incompatible con Neon (verificados por lectura directa del archivo, 2026-07-26):
+`src/lib/db.ts` configuraba el `Pool` para un Postgres local en la misma red. Tres puntos lo hacían incompatible con Neon (verificados por lectura directa del archivo, 2026-07-26):
 
-| # | Punto | Fuente | Por qué rompe con Neon |
-|---|---|---|---|
-| a | **No hay opción `ssl`** en el `Pool` | `db.ts:6-15` | Neon exige TLS. Sin `ssl`, la conexión **falla**. Es el bloqueante duro. |
-| b | `connectionTimeoutMillis: 2000` | `db.ts:14` | Neon duerme la base tras inactividad; despertarla puede exceder 2 s → la primera visita falla. |
-| c | `pool.on('error', …)` hace `process.exit(-1)` | `db.ts:28-31` | Un error de conexión ocioso (habitual cuando Neon escala a cero) **termina el proceso del servidor entero**. |
+| # | Punto | Fuente original | Por qué rompía con Neon | Corrección aplicada |
+|---|---|---|---|---|
+| a | **No había opción `ssl`** en el `Pool` | `db.ts:6-15` | Neon exige TLS. Sin `ssl`, la conexión **falla**. Era el bloqueante duro. | `ssl` condicional por `DB_SSL`, más `DB_SSL_REJECT_UNAUTHORIZED` como escotilla para certificados autofirmados. |
+| b | `connectionTimeoutMillis: 2000` | `db.ts:14` | Neon duerme la base tras inactividad; despertarla puede exceder 2 s → la primera visita falla. | Configurable por `DB_CONNECTION_TIMEOUT_MS`, por defecto **15000**. |
+| c | `pool.on('error', …)` hacía `process.exit(-1)` | `db.ts:28-31` | Un error de conexión ocioso (habitual cuando Neon escala a cero) **terminaba el proceso del servidor entero**. | El handler solo registra el error; el pool descarta el cliente roto y abre otro. |
 
-**Remediación**: (a) SSL condicional por variable de entorno para no romper el entorno local sin TLS; (b) subir el timeout de conexión; (c) registrar el error del pool sin matar el proceso.
+Se mantuvo la convención de variables discretas `DB_*` ya establecida en `db.ts` y `docker-compose.yml`. **No se introdujo `DATABASE_URL`**: se verificó por búsqueda en todo el repo que no existe ningún consumidor de esa variable en `src/`.
 
-> **Aclaración**: (c) es un problema de robustez que existe hoy también en local — con Neon simplemente pasa de improbable a esperable.
+**Variables nuevas** (las tres opcionales; sin definirlas, el comportamiento es idéntico al anterior):
+
+| Variable | Por defecto | Para qué |
+|---|---|---|
+| `DB_SSL` | `false` | `true` activa TLS. Necesaria en Neon; debe quedar sin definir en local. |
+| `DB_SSL_REJECT_UNAUTHORIZED` | `true` | Solo se pone en `false` si el proveedor usa un certificado autofirmado. |
+| `DB_CONNECTION_TIMEOUT_MS` | `15000` | Margen para el arranque en frío de una base con suspensión por inactividad. |
+
+**Verificación** (2026-07-27, tres fuentes independientes):
+
+1. `npx tsc --noEmit` → exit 0.
+2. `npm run build` → build SSR completo sin errores.
+3. Prueba de conexión real contra `ecommerce_db` con la config nueva:
+   - por defecto → `CONEXION OK | ssl=false | db=ecommerce_db`
+   - con `DB_SSL=true` → `The server does not support SSL connections`
+
+   El segundo resultado es el esperado y **confirma que el flag negocia TLS de verdad**: el Postgres local no lo tiene, Neon sí.
+
+> **Aclaración**: (c) era un problema de robustez que existía también en local — con Neon simplemente pasaba de improbable a esperable.
+
+> **Hallazgo para después** (detectado al verificar, fuera del alcance de H1): el `.env` local define `DB_PORT=5501`, pero el contenedor `ecommerce_db` publica `5432` (`docker ps`) y `docker-compose.yml:43` fija `DB_PORT: 5432` para el servicio `app`. Por eso la app **en Docker funciona**, pero levantar la app **en el host** leyendo el `.env` falla con `ECONNREFUSED 127.0.0.1:5501`. No bloquea el deploy (Render define sus propias variables). Requiere decidir cuál de los dos puertos es el correcto.
 
 ### H2 — La base viva diverge del dump versionado
 **Severidad** 🟡 · **Estado** `Abierto`
