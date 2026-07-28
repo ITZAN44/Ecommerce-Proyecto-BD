@@ -6,18 +6,20 @@
 
 ## Estado del plan (2026-07-27)
 
-**15 issues: 5 resueltos · 1 riesgo aceptado · 9 abiertos.**
+**19 issues: 6 resueltos · 1 riesgo aceptado · 12 abiertos.**
 
 | Bloque | Abiertos |
 |---|---|
-| 🔴 Seguridad | S2 |
+| 🔴 Seguridad | S2, S3 |
 | 🟡 Arquitectura y DevOps | A1, A2, A3, A4, C1 |
 | 🟢 Código muerto y limpieza | D1, D2, D3, D4 |
-| ☁️ Deploy | H2, H3 |
-| ✅ Resueltos | DOC1, V1, V2, V3, H1 |
+| ☁️ Deploy | H3 |
+| ✅ Resueltos | DOC1, V1, V2, V3, H1, H2 |
 | 🤝 Riesgo aceptado | S1 (credenciales LAN ya públicas — ver decisión del 2026-07-27) |
 
-> **Bloqueante duro del deploy: levantado.** Con H1 resuelto, ya no queda ningún impedimento técnico para conectar a Neon. H2 sigue abierto y condiciona **qué datos** llegan a la nube, no si la conexión funciona.
+> **Corrección de conteo (2026-07-27)**: el encabezado venía arrastrando un total de **15** issues. Al recontar sobre los encabezados reales del documento son **18**: el bloque `☁️ Deploy` (H1, H2, H3) se agregó el 2026-07-26 y el total nunca se actualizó. Los estados individuales siempre fueron correctos; el error estaba solo en la suma.
+
+> **El camino al deploy quedó libre.** H1 levantó el bloqueante de conexión (TLS) y H2 dejó el dump apto y validado. H3 no es un defecto: solo registra que el proyecto todavía no está desplegado. Lo que resta depende de una cuenta en Neon, no de arreglos en el proyecto.
 
 > **Nota importante**: la pasada de herramientas del 2026-07-24 (semgrep, gitleaks, hadolint, kubeconform, ansible-lint) fue de **verificación, no de remediación** — cruzó hallazgos con una 2ª fuente, pero **no corrigió ninguno**. Además, ninguna de esas herramientas cubre D1–D4: el código muerto en PostgreSQL no lo detecta un SAST de código de aplicación. **A la fecha no se ejecutó ninguna limpieza de código muerto.**
 
@@ -51,11 +53,11 @@ El registro original listaba 3 archivos. Un barrido sobre todo el árbol trackea
 
 | Categoría | Archivos | Qué contiene |
 |---|---|---|
-| Config activa | `docker-compose.yml`, `k8s/postgres-secret.yaml`, `ansible/inventory/hosts.ini`, `ansible/inventory/group_vars/{all,production}.yml`, `ansible/roles/k3s/{defaults/main.yml,files/postgres-secret.yaml}`, `exportar_bd.ps1`, `audit/tools/.tbls.yml` | password de BD, password de k8s, IP y usuario de la VM |
+| Config activa | `docker-compose.yml`, `k8s/postgres-secret.yaml`, `ansible/inventory/hosts.ini`, `ansible/inventory/group_vars/{all,production}.yml`, `ansible/roles/k3s/{defaults/main.yml,files/postgres-secret.yaml}`, ~~`exportar_bd.ps1`~~ (✅ limpiado 2026-07-27), `audit/tools/.tbls.yml` | password de BD, password de k8s, IP y usuario de la VM |
 | Documentación | `docs/explanation/devops/arquitectura.md`, `audit/HERRAMIENTAS.md`, **este mismo archivo** (antes de esta redacción), 12 archivos en `docs/_legacy/` | los mismos valores, citados como ejemplo |
 | Falso positivo | `jenkins/kubeconfig` | **No es filtración**: son 3 líneas de comentario, una plantilla sin certificados ni tokens (verificado por lectura directa) |
 
-> `database/backup_bd_real.sql` matchea la cadena de la password, pero **SIN VERIFICAR** si es la credencial o un dato de la base (un importe, un teléfono). No se pudo inspeccionar.
+> ✅ **Resuelto el 2026-07-27** (era `SIN VERIFICAR`): `database/backup_bd_real.sql` matchea la cadena de la password **5 veces, pero NO es la credencial**. Todas son `hash_12345678`, un placeholder de contraseña en la columna `hash_contrasena` de `clientes` (3 en filas de `auditoria`, 2 en filas de `clientes`). Es dato de prueba de la aplicación, no credencial de infraestructura. **El dump sale de la lista de S1.**
 
 #### Evaluación de riesgo (2026-07-27)
 
@@ -102,6 +104,27 @@ Se decidió **no rotar** estas credenciales. Fundamento:
 `src/pages/api/clientes/index.ts:43,72` guarda `` `hash_${contrasena}` `` — la contraseña en texto plano con un prefijo literal `"hash_"`, sin ninguna función criptográfica. Además **ningún endpoint la lee ni compara** → no existe autenticación real.
 
 **Remediación**: si el proyecto necesita auth, usar hashing real (bcrypt/argon2) y un flujo de login. Si no lo necesita (proyecto académico), **renombrar la columna** para no inducir a error (`hash_contrasena` sugiere seguridad que no existe).
+
+> **Confirmación colateral (2026-07-27)**: al auditar el dump aparecieron 5 ocurrencias de `hash_12345678`. Es exactamente lo que describe este issue — la contraseña `12345678` guardada en claro con el prefijo `hash_`. El nombre de la columna es engañoso y el dato queda legible en el dump versionado.
+
+### S3 — La limpieza de datos no alcanzó la tabla `auditoria`
+**Severidad** 🟡 · **Estado** `Abierto` (detectado el 2026-07-27)
+
+La limpieza de datos de prueba del 2026-07-25 renombró los clientes a nombres ficticios (`Karina Flores`, `Óscar Vargas`), pero **la tabla `auditoria` conserva los valores previos** en sus columnas `datos_anteriores` / `datos_nuevos`.
+
+**Verificado en la base viva**: 6 filas de `auditoria` contienen direcciones de correo de dominios públicos. Como `auditoria` se exporta en el dump, esos valores viajan al repositorio.
+
+Direcciones presentes en el dump (5 únicas): `chile@gmail.com`, `ijij@gmail.com`, `sales.lol@gmail.com`, `tieso@gmail.com`, `torque@gmail.com`. `SIN VERIFICAR` si corresponden a personas reales o son cuentas inventadas durante las pruebas.
+
+**Alcance real de la exposición**: las 5 **ya estaban** en el dump publicado en `origin/main` antes de este re-export — se comprobó que el dump nuevo **no agrega ninguna dirección nueva**. Es decir, no es una fuga nueva, es una preexistente que la limpieza no cubrió.
+
+**Por qué pasó**: la limpieza operó sobre las tablas de negocio, pero los triggers de auditoría ya habían registrado los valores originales. Un `UPDATE` de limpieza **genera una fila de auditoría más** con el valor viejo en `datos_anteriores`, en vez de borrar rastro.
+
+**Remediación**: decidir una de dos.
+1. Purgar o anonimizar `auditoria` antes de re-exportar (`UPDATE` sobre los JSON, o `TRUNCATE` si el histórico no aporta).
+2. Excluir `auditoria` del dump versionado (`--exclude-table-data=auditoria`), conservándola solo en la base viva.
+
+> La opción 2 es más simple y no pierde nada del esquema; la 1 conserva el histórico a costa de más trabajo. **No se aplicó ninguna**: requiere decisión del responsable, porque implica descartar datos.
 
 ---
 
@@ -260,6 +283,9 @@ En el flujo crear → pagar, el stock físico (`stock.cantidad_en_stock`) **nunc
 > Hallazgos del 2026-07-26 al evaluar el despliegue en **Render** (app) + **Neon** (PostgreSQL gestionado).
 > Son específicos de una base gestionada; **no afectan al entorno local con Docker**, donde todo funciona.
 > Objetivo elegido: Render (Docker, free tier) + Neon (Postgres free tier).
+>
+> 📄 **El procedimiento vive aparte**: [`deploy/spec-render-neon.md`](./deploy/spec-render-neon.md).
+> Este archivo registra **qué está roto** (issues); aquel documenta **cómo se despliega** (spec verificado, paso a paso).
 
 ### H1 — `db.ts` no está preparado para una base gestionada (bloquea el deploy)
 **Severidad** 🔴 · **Estado** `Resuelto` (2026-07-27)
@@ -297,7 +323,7 @@ Se mantuvo la convención de variables discretas `DB_*` ya establecida en `db.ts
 > **Hallazgo para después** (detectado al verificar, fuera del alcance de H1): el `.env` local define `DB_PORT=5501`, pero el contenedor `ecommerce_db` publica `5432` (`docker ps`) y `docker-compose.yml:43` fija `DB_PORT: 5432` para el servicio `app`. Por eso la app **en Docker funciona**, pero levantar la app **en el host** leyendo el `.env` falla con `ECONNREFUSED 127.0.0.1:5501`. No bloquea el deploy (Render define sus propias variables). Requiere decidir cuál de los dos puertos es el correcto.
 
 ### H2 — La base viva diverge del dump versionado
-**Severidad** 🟡 · **Estado** `Abierto`
+**Severidad** 🟡 · **Estado** `Resuelto` (2026-07-27)
 
 `database/backup_bd_real.sql` **ya no refleja** la base viva `ecommerce_db`. Cambios aplicados a la base y no re-exportados:
 
@@ -306,7 +332,76 @@ Se mantuvo la convención de variables discretas `DB_*` ya establecida en `db.ts
 
 **Impacto en el deploy**: la carga inicial de Neon se hace desde el dump. Si se sube el dump actual, la base en la nube arranca **sin el fix de V1 y con los datos de prueba**.
 
-**Remediación**: re-exportar el dump (`exportar_bd.ps1`) **antes** de cargar Neon, y volver a versionarlo.
+**Remediación**: re-exportar el dump **antes** de cargar Neon, y volver a versionarlo.
+
+#### Ampliación del 2026-07-27 — el re-export tiene dos motivos, no uno
+
+Al analizar el dump para el despliegue aparecieron **requisitos técnicos adicionales** que convierten el re-export en obligatorio incluso ignorando la divergencia de contenido:
+
+- **78 sentencias `OWNER TO`** en `database/backup_bd_real.sql`. El rol `neon_superuser` no puede ejecutar `ALTER ... OWNER TO`. Como el dump es de **formato plano**, se carga con `psql`, y `--no-owner` es un flag de `pg_dump`/`pg_restore` que **no existe en `psql`**: no se puede corregir al cargar.
+- **`client_encoding = 'WIN1252'`**, con riesgo de corromper acentos. Conviene `--encoding=UTF8`.
+
+Flags requeridos en el nuevo export: `--no-owner --no-privileges --encoding=UTF8`.
+
+> ✅ Confirmado también por análisis: el dump **no** contiene `CREATE EXTENSION`, `CREATE ROLE`, `GRANT`/`REVOKE` ni `CREATE DATABASE`. Por ese lado está limpio.
+
+#### ~~🔴 `exportar_bd.ps1` no funciona hoy~~ → ✅ Reescrito el 2026-07-27
+
+El script apunta a `127.0.0.1:5501` (`exportar_bd.ps1:37`), que correspondía a una instalación **nativa** de PostgreSQL en el host, distinta del contenedor. Verificado el 2026-07-27 con dos comprobaciones independientes:
+
+1. `Get-NetTCPConnection -State Listen -LocalPort 5501` → **nada escuchando**.
+2. `Get-Service -Name 'postgresql*'` → **ningún servicio registrado**.
+
+El re-export debe hacerse contra el contenedor `ecommerce_db` (que tiene `pg_dump` 16.11), no con ese script tal como está.
+
+> Esto **explica el hallazgo anotado en H1** sobre el `DB_PORT=5501` del `.env`: no es un error de tipeo, es un remanente de la era del Postgres nativo.
+
+Además, el script tenía otros tres defectos detectados al revisarlo:
+
+| # | Defecto | Línea original |
+|---|---|---|
+| 1 | No pasaba `--no-owner --no-privileges --encoding=UTF8`: aunque se arreglara el puerto, **volvía a generar un dump incompatible con Neon** | `:37` |
+| 2 | Imprimía la contraseña en texto plano, dos veces | `:32`, `:50` |
+| 3 | Sugería `docker-compose down -v` como "siguiente paso" — ese comando **destruye el volumen de datos** | `:43` |
+
+**Reescrito el 2026-07-27.** Ahora ejecuta `pg_dump` dentro del contenedor (no necesita client tools en el host), aplica los tres flags obligatorios, no maneja ni imprime credenciales, y no sugiere ningún comando destructivo.
+
+Buenas prácticas incorporadas:
+
+- **Escritura atómica**: exporta a un temporal y solo reemplaza el dump anterior si todo salió bien. Un `pg_dump` que falle a mitad ya no puede pisar un dump bueno.
+- **Verificación post-export**: comprueba 5 condiciones sobre el archivo generado (0 `OWNER TO`, `UTF8`, 0 `GRANT`/`REVOKE`, presencia de tablas, marca de cierre del dump). Si alguna falla, **rechaza el dump y conserva el anterior**.
+- **Precondiciones explícitas**: valida que exista `docker`, que el contenedor esté corriendo y que PostgreSQL acepte conexiones, con mensajes accionables y `exit 1`.
+- **Parametrizado**: `-Container`, `-Database`, `-User`, `-OutputPath`, con ayuda vía `Get-Help`.
+- **Aviso de `\restrict`**: detecta los meta-comandos de pg_dump 16.10+ y remite al spec de deploy.
+- **ASCII puro**: un `.ps1` sin BOM con caracteres no-ASCII se corrompe en Windows PowerShell 5.1.
+
+**Verificado por ejecución (2026-07-27)**:
+
+| Prueba | Resultado |
+|---|---|
+| Contenedor inexistente | `exit 1`, mensaje claro, **dump anterior intacto** (hash sin cambios) |
+| Ejecución normal | `exit 0`, las 5 verificaciones OK, aviso de `\restrict` mostrado |
+| Restauración del dump que produjo | Contenedor descartable, **cero errores**; 12 indicadores idénticos a la base viva, acentos y fix de V1 correctos |
+
+> Con esto `exportar_bd.ps1` sale de la lista de archivos con credenciales de **S1**: quedan **27**.
+
+#### ✅ Resolución (2026-07-27)
+
+Re-exportado desde el contenedor `ecommerce_db` con `pg_dump` 16.11 y los flags `--no-owner --no-privileges --encoding=UTF8`. Exit 0, stderr vacío.
+
+| Comprobación | Antes | Después |
+|---|---|---|
+| `OWNER TO` | 78 | **0** |
+| `client_encoding` | `WIN1252` | **UTF8** |
+| Fix de V1 (`CALL` dentro de `sp_procesar_pago`) | ausente | **presente** |
+
+**Validado por restauración real**, no solo por inspección del archivo: se cargó en un contenedor `postgres:16-alpine` descartable (sin tocar el volumen del proyecto) y se comparó contra la base viva. Cero errores en la carga; los 8 indicadores estructurales (13 tablas, 1 vista, 2 materializadas, 35 funciones, 14 procedimientos, 18 triggers, 48 índices, 12 FKs) y las filas de las 13 tablas resultaron **idénticos**. Los acentos también, byte a byte.
+
+> ✅ **El re-export es reproducible**: `exportar_bd.ps1` fue reescrito el 2026-07-27 y genera este mismo dump con una sola ejecución. El primer re-export se hizo a mano; el definitivo salió del script y se validó por restauración.
+
+> 🆕 **Efecto colateral del cambio de versión**: el dump nuevo incluye los meta-comandos `\restrict`/`\unrestrict` (PostgreSQL 16.10+), que el viejo no tenía. Solo los entienden clientes `psql` recientes. Impacta la ruta de carga a Neon — detalle en [`deploy/spec-render-neon.md` §6.4 y §6.6](./deploy/spec-render-neon.md).
+
+Procedimiento y evidencia completa en [`deploy/spec-render-neon.md` §6](./deploy/spec-render-neon.md).
 
 ### H3 — Estado del despliegue
 **Severidad** 🟢 · **Estado** `Abierto`

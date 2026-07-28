@@ -13,6 +13,7 @@
 | [`reference/`](./reference/) | Estructura exacta y exhaustiva (columnas, tipos, constraints, ER, endpoints) | 🤖 **Generada** por herramientas desde la fuente viva. Regenerable. |
 | [`explanation/`](./explanation/) | El porqué: lógica de negocio, decisiones de diseño, flujos | ✍️ **Curada** a mano, apuntando a la fuente. |
 | [`remediacion.md`](./remediacion.md) | Registro de issues a arreglar (separado de la doc descriptiva) | ✍️ Mantenido a mano; se cierra a medida que se resuelve. |
+| [`deploy/`](./deploy/spec-render-neon.md) | Spec **vivo** del despliegue a hosting gestionado (Render + Neon) | ✍️ Crece paso a paso: solo entra lo verificado, con su evidencia. |
 | [`adr/`](./adr/README.md) | Decisiones de arquitectura de la auditoría (metodología + herramientas) | ✍️ Inmutables; un archivo por decisión. |
 | [`how-to/`](./how-to/README.md) | Guías operativas paso a paso | ✍️ Se agregan a medida que hacen falta. |
 
@@ -27,6 +28,9 @@
 
 ### ⚙️ DevOps — ✅ documentado
 - **Explanation**: [`explanation/devops/`](./explanation/devops/README.md) — arquitectura real (Docker, Jenkins, K3s, Ansible) + validación de la doc previa.
+
+### ☁️ Despliegue gestionado — 🚧 en curso
+- **Spec**: [`deploy/spec-render-neon.md`](./deploy/spec-render-neon.md) — Render (app) + Neon (PostgreSQL). Documento vivo: separa lo **verificado** (con evidencia) de lo **pendiente de ejecutar**.
 
 ## Estado de la auditoría
 
