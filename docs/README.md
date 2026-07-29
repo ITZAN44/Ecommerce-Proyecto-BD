@@ -12,7 +12,7 @@
 |---------|--------------|------------------|
 | [`reference/`](./reference/) | Estructura exacta y exhaustiva (columnas, tipos, constraints, ER, endpoints) | 🤖 **Generada** por herramientas desde la fuente viva. Regenerable. |
 | [`explanation/`](./explanation/) | El porqué: lógica de negocio, decisiones de diseño, flujos | ✍️ **Curada** a mano, apuntando a la fuente. |
-| [`remediacion.md`](./remediacion.md) | Registro de issues a arreglar (separado de la doc descriptiva) | ✍️ Mantenido a mano; se cierra a medida que se resuelve. |
+| [`remediacion.md`](./remediacion.md) | **Puntero** a [GitHub Issues](https://github.com/ITZAN44/Ecommerce-Proyecto-BD/issues), donde vive el registro de issues | 🤖 El estado y el conteo los calcula GitHub. Nada que mantener a mano. |
 | [`deploy/`](./deploy/spec-render-neon.md) | Spec **vivo** del despliegue a hosting gestionado (Render + Neon) | ✍️ Crece paso a paso: solo entra lo verificado, con su evidencia. |
 | [`adr/`](./adr/README.md) | Decisiones de arquitectura de la auditoría (metodología + herramientas) | ✍️ Inmutables; un archivo por decisión. |
 | [`how-to/`](./how-to/README.md) | Guías operativas paso a paso | ✍️ Se agregan a medida que hacen falta. |

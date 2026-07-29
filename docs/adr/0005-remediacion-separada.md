@@ -1,7 +1,9 @@
 # ADR 0005 — Separar el registro de remediación de la doc descriptiva
 
-- **Estado**: Aceptado
+- **Estado**: **Superado** por [ADR 0008](./0008-remediacion-en-github-issues.md) (2026-07-29)
 - **Fecha**: 2026-07-24
+
+> El principio de separar issues de documentación descriptiva **sigue vigente**. Lo que cambió es el soporte: el archivo único se volvió insostenible y el registro pasó a GitHub Issues. El contenido de abajo se conserva sin modificar, como registro de la decisión original.
 
 ## Contexto
 
