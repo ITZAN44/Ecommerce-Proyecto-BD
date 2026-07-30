@@ -67,6 +67,41 @@ rg "output|adapter" astro.config.mjs      # server + node standalone
 rg "USER|CMD|HEALTHCHECK" Dockerfile      # no-root, entry.mjs, healthcheck
 ```
 
+Confirmado en producción: la app arranca y sirve sin ningún cambio de código.
+
+### El servicio creado
+
+Igual que con Neon, la única coordenada que hace falta recordar es el **id**; el resto se le pregunta a Render:
+
+```bash
+SRV=srv-d9lb7om7bikc738nvtrg
+render services -o json                  # lista del workspace activo
+render deploys list "$SRV" -o text       # historial de deploys y su estado
+render logs --resources "$SRV" --limit 100 -o text
+```
+
+El CLI se instala desde el release de GitHub de `render-oss/cli` **verificando el checksum** (`sha256sum --check`), porque no existe paquete de Chocolatey — la afirmación contraria circula en buscadores y es falsa.
+
+**Sin `--health-check-path`, por decisión.** Ninguna ruta de `src/pages/api/` es liviana: todas consultan Postgres, comprobable con
+
+```bash
+rg -l "lib/db" src/pages/api/
+```
+
+Un health check HTTP sondeando cualquiera de ellas mantendría a Neon despierta —consumiendo horas de cómputo del plan Free— y podría fallar durante el arranque en frío. Sin ruta configurada, Render da el servicio por vivo cuando abre el puerto. Esto además vuelve irrelevante la duda sobre el `HEALTHCHECK` del `Dockerfile`: Render no lo usa.
+
+**Se despliega desde `main`, no desde la rama de trabajo.** El código de la app es idéntico en las dos; lo que difiere son documentos. Con `autoDeploy` activo, apuntar a la rama de documentación provocaría un redeploy por cada commit de docs.
+
+### Cómo comprobar que las variables de entorno llegaron
+
+El CLI **no tiene comando para leer** las variables de un servicio. No hace falta: `src/lib/db.ts` imprime su configuración al arrancar —host, puerto, base, usuario y ssl, nunca el password— así que el log del arranque lo confirma desde la propia app:
+
+```bash
+render logs --resources "$SRV" --limit 300 -o text | rg -A 8 "Configuración de PostgreSQL"
+```
+
+Son dos fuentes independientes: lo que se pidió al crear el servicio, y lo que el proceso reporta que recibió.
+
 ---
 
 ## 4. Neon: decisiones de plataforma
@@ -149,6 +184,10 @@ Esto es el corazón del documento: lo que **nadie deduce mirando el repo**.
 | El `.env` local define un `DB_PORT` que no coincide con el del contenedor | Remanente de una instalación nativa que ya no existe. En Docker funciona porque compose lo pisa; en el host falla con `ECONNREFUSED` |
 | `neonctl projects create --database-name <x>` **se ignora en silencio**: exit 0, sin warning, y la base queda llamándose `neondb` | Crear la base aparte con `neonctl databases create --name … --owner-name …` y **listar** para confirmar. No confiar en el exit code |
 | El rol de Neon es `neondb_owner`, no `postgres` | `DB_USER` cambia de valor entre local y producción; es la única variable `DB_*` cuyo nombre no coincide con lo de siempre |
+| `render services create` **solo corre en modo no interactivo** (lo dice su propio `--help`) | Pasarle `-o json` o `-o text`; con el default `interactive` no ejecuta |
+| `render login` usa **device authorization flow**: hace polling y es **ese proceso** el que recibe el token | Debe seguir vivo mientras se autoriza en el navegador. Si el proceso muere antes, la aprobación se consume igual y el token se pierde: el síntoma es `token has already been approved` y un `~/.render/cli.yaml` con `refreshtoken` vacío |
+| Después de `login`, el workspace activo queda **vacío** en la config | `render workspace set <id>`, o los comandos que dependen del workspace fallan |
+| `render logs --text <patrón>` filtra **por línea** | Un objeto impreso en varias líneas devuelve solo la primera. Para bloques: `--limit` amplio y filtrar localmente con contexto |
 
 ---
 
@@ -186,14 +225,16 @@ Que `psql` termine con exit 0 y stderr vacío **no prueba que la base destino se
 | 1 | Instalar `neonctl` y autenticar | ✅ hecho — vía `neonctl auth` (OAuth de navegador), sin pegar la API key en ninguna parte |
 | 2 | Crear el proyecto Neon y la base | ✅ hecho — ver §4 |
 | 3 | Cargar el dump por la ruta de §7 y comparar contra la base local | ✅ hecho — comparación sin diferencias |
-| 4 | Desplegar en Render desde el `Dockerfile`, con las variables `DB_*` + `DB_SSL=true` | ⏳ pendiente |
-| 5 | Confirmar si Render usa el `HEALTHCHECK` del `Dockerfile` o el suyo | ⏳ depende de 4 |
-| 6 | Verificar el arranque en frío: primera petición tras >5 min de inactividad | ⏳ depende de 4 |
+| 4 | Desplegar en Render desde el `Dockerfile`, con las variables `DB_*` + `DB_SSL=true` | ✅ hecho — ver §3 |
+| 5 | Confirmar si Render usa el `HEALTHCHECK` del `Dockerfile` o el suyo | ✅ resuelto por decisión: no se configura health check HTTP, así que Render no lo usa (§3) |
+| 6 | Verificar el arranque en frío: primera petición tras >15 min de inactividad | ⏳ pendiente |
 | 7 | Verificar que un error de cliente ocioso **ya no** tumba el servidor | ⏳ depende de 6 |
 
-Los pasos 6 y 7 son los que validan el fix del pool ([#17](https://github.com/ITZAN44/Ecommerce-Proyecto-BD/issues/17)) en condiciones reales. Hasta entonces, ese arreglo está verificado en local pero **no en producción**.
+Los pasos 6 y 7 son los que validan el fix del pool ([#17](https://github.com/ITZAN44/Ecommerce-Proyecto-BD/issues/17)) en condiciones reales. Hasta entonces, ese arreglo está verificado en local y en un arranque tibio, pero **no** contra una suspensión real.
 
-Cierra [#11](https://github.com/ITZAN44/Ecommerce-Proyecto-BD/issues/11) cuando exista una URL pública verificada.
+> **Cómo medirlo, y por qué no se puede improvisar.** Render suspende el servicio a los ~15 min de inactividad y Neon a los 5. **Cada petición reinicia ambos contadores**, incluidas las de verificación. La medición exige dejar el servicio quieto más de 15 minutos y recién entonces cronometrar la primera petición, que paga los dos arranques en frío encadenados. Comprobar después en el log que aparezca la reconexión y que **no** haya un reinicio del proceso.
+
+[#11](https://github.com/ITZAN44/Ecommerce-Proyecto-BD/issues/11) se cerró con la URL pública verificada; el estado lo lleva GitHub.
 
 ---
 
@@ -237,6 +278,10 @@ Fue el primer comando que se escribió como "la forma correcta" en este mismo do
 ```
 
 Es la diferencia entre preguntarle al lugar equivocado y forzar al sistema a demostrar el comportamiento.
+
+**El estado "Live" tampoco es una verificación.** El primer deploy pasó a `Live` en menos de un minuto, demasiado poco para un `Dockerfile` que corre `npm ci` dos veces. Eso obligó a comprobarlo en otra parte en vez de aceptar el estado: los logs del arranque y una petición HTTP real. Un panel que dice que todo está bien es una afirmación como cualquier otra.
+
+**Contar palabras en el HTML no prueba que los datos vengan de la base.** Buscar términos genéricos en la página de producción devolvió varias coincidencias que parecían confirmar que la app estaba leyendo datos reales. Podían ser etiquetas del menú. La prueba válida fue buscar **valores que solo pueden existir si la consulta corrió**: los correos anonimizados que creó nuestro propio `UPDATE` en esta base y en ninguna otra. Es el mismo error que buscar el nombre de una rutina en el dump y encontrar su propia definición.
 
 **Un exit code 0 no es una verificación.** La carga del dump terminó con exit 0 y stderr vacío, y eso solo dice que ninguna sentencia falló. No dice que la base destino sea equivalente: ver la lista de §7.
 
