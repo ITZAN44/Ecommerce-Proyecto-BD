@@ -34,7 +34,7 @@ Los issues de infraestructura de Kubernetes, Jenkins y Ansible **no bloquean est
 | El dump es cargable en una base gestionada y refleja la base viva | [#18](https://github.com/ITZAN44/Ecommerce-Proyecto-BD/issues/18) | ✅ Cerrado |
 | Sin datos personales en el dump que se sube a la nube | [#13](https://github.com/ITZAN44/Ecommerce-Proyecto-BD/issues/13) | ✅ Cerrado |
 
-**Bloqueante vigente**: ninguno en el proyecto. Lo que resta depende de una API key de Neon.
+**Bloqueante vigente**: ninguno. La base ya está cargada y verificada en Neon (§5); lo que resta es la parte de Render.
 
 ### Variables de entorno que introdujo el fix del pool
 
@@ -83,6 +83,24 @@ docker exec ecommerce_db psql --version
 psql --version                        # se espera que falle: no está en el host
 ```
 
+### El proyecto creado
+
+La única coordenada que hace falta recordar es el **project id**; todo lo demás se le pregunta a Neon, que es su dueño:
+
+```bash
+PID=delicate-silence-40789773
+neonctl projects get   "$PID"                     # id, nombre, región (ojo: posicional, NO --project-id)
+neonctl branches list  --project-id "$PID"        # rama por defecto
+neonctl databases list --project-id "$PID"        # bases y su owner
+neonctl connection-string main --project-id "$PID" --database-name ecommerce_db --role-name neondb_owner
+```
+
+> ⚠️ El último comando **imprime el password**. Nunca redirigirlo a un archivo del repo ni pegar su salida en un documento o un issue. Para usarlo en un script: capturarlo en una variable y no volver a imprimirlo.
+
+Se eligió la región del proyecto **igual a la región donde correrá Render**: cada query de una página SSR cruzaría el continente si no coinciden.
+
+Se eligió el **PostgreSQL 16** de Neon para igualar el `server_version` de la base local (comprobable con `docker exec ecommerce_db psql -U postgres -tAc "SELECT current_setting('server_version')"`). No es obligatorio, pero elimina de entrada una clase entera de incompatibilidades entre lo que genera `pg_dump` y lo que acepta el destino.
+
 **Plan Free**: el límite relevante es el scale-to-zero **a los 5 minutos de inactividad, no desactivable**. Esa es la razón de fondo de dos de los tres arreglos del pool ([#17](https://github.com/ITZAN44/Ecommerce-Proyecto-BD/issues/17)): el timeout corto no alcanzaba para despertar la base, y el handler de error convertía un cierre de conexión ociosa rutinario en la caída del servidor. Los límites de storage y transferencia sobran para el tamaño de este dump — consultar el [FAQ oficial](https://neon.com/docs/introduction/plans) antes de asumir cifras.
 
 ---
@@ -129,6 +147,8 @@ Esto es el corazón del documento: lo que **nadie deduce mirando el repo**.
 | `docker-compose.yml` monta `.:/app` y **sombrea** el `dist/` de la imagen | No aplica en Render (sin bind mount), pero explica diferencias local↔producción |
 | Git Bash convierte rutas `/tmp/...` de `docker exec` a rutas Windows | Anteponer `MSYS_NO_PATHCONV=1` |
 | El `.env` local define un `DB_PORT` que no coincide con el del contenedor | Remanente de una instalación nativa que ya no existe. En Docker funciona porque compose lo pisa; en el host falla con `ECONNREFUSED` |
+| `neonctl projects create --database-name <x>` **se ignora en silencio**: exit 0, sin warning, y la base queda llamándose `neondb` | Crear la base aparte con `neonctl databases create --name … --owner-name …` y **listar** para confirmar. No confiar en el exit code |
+| El rol de Neon es `neondb_owner`, no `postgres` | `DB_USER` cambia de valor entre local y producción; es la única variable `DB_*` cuyo nombre no coincide con lo de siempre |
 
 ---
 
@@ -146,21 +166,30 @@ El contenedor tiene salida a internet (comprobable con `docker exec ecommerce_db
 
 **Ruta alternativa**: `neon psql -- -f dump.sql`. Si se usa, verificar primero que no falle con `invalid command \restrict`.
 
+### Qué hay que comparar para dar la carga por buena
+
+Que `psql` termine con exit 0 y stderr vacío **no prueba que la base destino sea equivalente**. La comparación se corre sobre las dos bases con la misma consulta y se hace `diff` de las salidas. Tiene que cubrir:
+
+- **Estructura**: tablas, columnas, PKs, FKs, checks, uniques, índices, rutinas (`pg_proc`), triggers no internos (`pg_trigger` con `NOT tgisinternal`), secuencias, vistas y vistas materializadas.
+- **Los nombres**, no solo los conteos: dos bases pueden tener 49 rutinas y no ser las mismas 49.
+- **Filas por tabla.**
+- **Vistas materializadas aparte.** Filtrar por `relkind='r'` las deja fuera, y `pg_dump` puede restaurarlas `WITH NO DATA`. Se comprueba con `relispopulated` **y** su conteo de filas.
+- **`last_value` de cada secuencia** (`pg_sequences`). Si quedan desfasadas, la carga se ve perfecta y el **primer `INSERT` en producción choca con una PK existente**. Ojo: `pg_sequences` no tiene columna `is_called`.
+- **Ausencia de PII**, otra vez, ya en el destino.
+
 ---
 
 ## 8. Lo que falta ejecutar
 
-Nada de esto está comprobado.
-
-| # | Paso | Depende de |
+| # | Paso | Estado |
 |---|---|---|
-| 1 | Instalar `neonctl` y autenticar con API key | 🔑 **API key generada por el usuario** |
-| 2 | Crear el proyecto Neon y la base | 1 |
-| 3 | Cargar el dump por la ruta de §7 y comparar estructura y filas contra la base local | 2 |
-| 4 | Desplegar en Render desde el `Dockerfile`, con las variables `DB_*` + `DB_SSL=true` | 3 |
-| 5 | Confirmar si Render usa el `HEALTHCHECK` del `Dockerfile` o el suyo | 4 |
-| 6 | Verificar el arranque en frío: primera petición tras >5 min de inactividad | 4 |
-| 7 | Verificar que un error de cliente ocioso **ya no** tumba el servidor | 6 |
+| 1 | Instalar `neonctl` y autenticar | ✅ hecho — vía `neonctl auth` (OAuth de navegador), sin pegar la API key en ninguna parte |
+| 2 | Crear el proyecto Neon y la base | ✅ hecho — ver §4 |
+| 3 | Cargar el dump por la ruta de §7 y comparar contra la base local | ✅ hecho — comparación sin diferencias |
+| 4 | Desplegar en Render desde el `Dockerfile`, con las variables `DB_*` + `DB_SSL=true` | ⏳ pendiente |
+| 5 | Confirmar si Render usa el `HEALTHCHECK` del `Dockerfile` o el suyo | ⏳ depende de 4 |
+| 6 | Verificar el arranque en frío: primera petición tras >5 min de inactividad | ⏳ depende de 4 |
+| 7 | Verificar que un error de cliente ocioso **ya no** tumba el servidor | ⏳ depende de 6 |
 
 Los pasos 6 y 7 son los que validan el fix del pool ([#17](https://github.com/ITZAN44/Ecommerce-Proyecto-BD/issues/17)) en condiciones reales. Hasta entonces, ese arreglo está verificado en local pero **no en producción**.
 
@@ -187,5 +216,15 @@ La frontera está en el borde de internet: lo de la LAN se aceptó con fundament
 Dos formas de engañarse que ya ocurrieron acá:
 
 **Un conteo agregado no prueba presencia.** Buscar el nombre de una rutina en el dump devolvía coincidencias que parecían confirmar que un fix estaba aplicado. Eran todas la **definición del propio procedimiento**. Al acotar la búsqueda al cuerpo de quien debía invocarla: cero llamadas. Hay que mirar el contexto, no el número.
+
+**`pg_stat_ssl` miente en Neon.** Consultarlo desde una sesión conectada a Neon devuelve `ssl = false` **aunque TLS esté activo y sea obligatorio**: el proxy de Neon termina TLS antes de llegar a Postgres, así que el backend no lo ve. Concluir "no hay cifrado" desde ese dato sería falso. La prueba válida es negativa — intentar conectar con `sslmode=disable` y comprobar que el servidor **rechaza**:
+
+```bash
+# esperado: ERROR: connection is insecure (try using `sslmode=require`)
+```
+
+Es la diferencia entre preguntarle al lugar equivocado y forzar al sistema a demostrar el comportamiento.
+
+**Un exit code 0 no es una verificación.** La carga del dump terminó con exit 0 y stderr vacío, y eso solo dice que ninguna sentencia falló. No dice que la base destino sea equivalente: ver la lista de §7.
 
 **Contar filas antes de un `UPDATE` masivo.** Un `WHERE` que parecía correcto dejaba fuera las filas de tipo `INSERT` (columna en `NULL`). Se detectó porque el conteo previo no coincidía con lo esperado. El conteo previo no es ceremonia: es el test.
