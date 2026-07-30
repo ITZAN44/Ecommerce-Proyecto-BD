@@ -217,6 +217,19 @@ Dos formas de engañarse que ya ocurrieron acá:
 
 **Un conteo agregado no prueba presencia.** Buscar el nombre de una rutina en el dump devolvía coincidencias que parecían confirmar que un fix estaba aplicado. Eran todas la **definición del propio procedimiento**. Al acotar la búsqueda al cuerpo de quien debía invocarla: cero llamadas. Hay que mirar el contexto, no el número.
 
+**Buscar en el working tree no dice nada del historial.** La comprobación de que el dump no lleva PII (`rg "@gmail.com" database/backup_bd_real.sql`) devuelve cero y se siente como prueba de limpieza. Solo prueba el estado presente del archivo. Los datos siguieron siendo legibles en commits ya publicados, en un repositorio público ([#20](https://github.com/ITZAN44/Ecommerce-Proyecto-BD/issues/20)). Al historial hay que preguntarle con su propia herramienta:
+
+```bash
+git log --all --oneline -S"<patron>" -- <ruta>            # commits donde el patrón entró o salió
+git grep -l "<patron>" $(git rev-list --all) -- <ruta>    # todos los commits cuyo árbol lo contiene
+```
+
+**Y una segunda capa de la misma trampa, que ya se cayó acá:** `git grep <patron> origin/main` **tampoco** sirve. Busca en el árbol de *ese commit*, no en el historial. En cuanto el fix de anonimización llegó a `origin/main`, ese comando empezó a devolver cero — igual que la búsqueda en el working tree, y por la misma razón. Solo `git log -S` (o un `git grep` sobre `git rev-list --all`) recorre el pasado.
+
+Fue el primer comando que se escribió como "la forma correcta" en este mismo documento, y estaba mal. Lo delató ejecutarlo (§8.5 de `CLAUDE.md`).
+
+**Anonimizar el presente y eliminar una exposición publicada son dos trabajos distintos**, y el primero no implica el segundo. Un `UPDATE` remedia la base; el historial de git no lo toca nadie salvo una reescritura explícita.
+
 **`pg_stat_ssl` miente en Neon.** Consultarlo desde una sesión conectada a Neon devuelve `ssl = false` **aunque TLS esté activo y sea obligatorio**: el proxy de Neon termina TLS antes de llegar a Postgres, así que el backend no lo ve. Concluir "no hay cifrado" desde ese dato sería falso. La prueba válida es negativa — intentar conectar con `sslmode=disable` y comprobar que el servidor **rechaza**:
 
 ```bash
